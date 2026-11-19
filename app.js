@@ -374,6 +374,264 @@ function handleAuthSubmit(event) {
     }
   }
 }
+/* =========================================
+   SCREEN 5: STATION DETAILS & PORT VIEW
+   ========================================= */
+let selectedStationId = null;
+let previousScreenId = "screen-home";
+
+function getStationsFromStorage() {
+  try {
+    const raw = localStorage.getItem("goev_stations");
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Failed to read goev_stations from LocalStorage:", err);
+    return [];
+  }
+}
+
+function getVehicleFromStorage() {
+  const fallbackVehicle = {
+    name: "Tata Nexon EV",
+    capacity: 40,
+    currentSoc: 30,
+    targetSoc: 80,
+    connector: "CCS2"
+  };
+  try {
+    const raw = localStorage.getItem("goev_vehicle");
+    return raw ? { ...fallbackVehicle, ...JSON.parse(raw) } : fallbackVehicle;
+  } catch (err) {
+    console.error("Failed to read goev_vehicle from LocalStorage:", err);
+    return fallbackVehicle;
+  }
+}
+
+function normalizePortStatus(status) {
+  const clean = String(status || "Unavailable").toLowerCase();
+  if (clean === "available") return "Available";
+  if (clean === "occupied") return "Occupied";
+  if (clean === "reserved") return "Reserved";
+  return "Unavailable";
+}
+
+function getStationAggregateStatus(station) {
+  const ports = Array.isArray(station.ports) ? station.ports : [];
+  const hasAvailable = ports.some(
+    (p) => normalizePortStatus(p.status) === "Available"
+  );
+  if (hasAvailable) {
+    return { label: "Available", cssClass: "status-pill--available" };
+  }
+  const hasReserved = ports.some(
+    (p) => normalizePortStatus(p.status) === "Reserved"
+  );
+  if (hasReserved) {
+    return { label: "Reserved", cssClass: "status-pill--reserved" };
+  }
+  const hasOccupied = ports.some(
+    (p) => normalizePortStatus(p.status) === "Occupied"
+  );
+  if (hasOccupied) {
+    return { label: "Occupied", cssClass: "status-pill--occupied" };
+  }
+  return { label: "Unavailable", cssClass: "status-pill--unavailable" };
+}
+
+function computeStationEstimate(station, vehicle) {
+  const capacity = Number(vehicle.capacity) || 40;
+  const currentSoc = Number(vehicle.currentSoc) || 30;
+  const targetSoc = Number(vehicle.targetSoc) || 80;
+  const socDelta = Math.max(0, targetSoc - currentSoc);
+
+  const energyKwh = Number(((capacity * socDelta) / 100).toFixed(2));
+  const powerKw = Number(station.powerKw || station.power || 30);
+  const pricePerKwh = Number(station.pricePerKwh || station.price || 15);
+
+  const estimatedHours =
+    powerKw > 0 ? Number((energyKwh / powerKw).toFixed(2)) : 0;
+  const estimatedCost = Math.round(energyKwh * pricePerKwh);
+
+  return {
+    energyKwh,
+    estimatedHours,
+    estimatedCost,
+    powerKw,
+    pricePerKwh
+  };
+}
+
+function renderStationPorts(station, vehicleConnector) {
+  const portsContainer = document.getElementById("detail-ports-list");
+  const portsCountEl = document.getElementById("detail-ports-count");
+  if (!portsContainer) return;
+
+  const ports = Array.isArray(station.ports) ? station.ports : [];
+  if (portsCountEl) {
+    const availableCount = ports.filter(
+      (p) => normalizePortStatus(p.status) === "Available"
+    ).length;
+    portsCountEl.textContent = `${availableCount} of ${ports.length} available`;
+  }
+
+  if (ports.length === 0) {
+    portsContainer.innerHTML = `<p class="muted-text">No port details listed for this sample station.</p>`;
+    return;
+  }
+
+  portsContainer.innerHTML = ports
+    .map((port, idx) => {
+      const portId = port.id || `Port ${idx + 1}`;
+      const connector = port.connector || port.type || station.connector || "CCS2";
+      const power = port.powerKw || port.power || station.powerKw || station.power || "--";
+      const status = normalizePortStatus(port.status);
+      const isCompatible =
+        !vehicleConnector ||
+        String(connector).toLowerCase() === String(vehicleConnector).toLowerCase();
+
+      const pillClass =
+        status === "Available"
+          ? "status-pill--available"
+          : status === "Occupied"
+          ? "status-pill--occupied"
+          : status === "Reserved"
+          ? "status-pill--reserved"
+          : "status-pill--unavailable";
+
+      return `
+        <div class="port-item-card" data-port-id="${portId}">
+          <div>
+            <p class="port-item-title">${portId} • ${connector}</p>
+            <p class="port-item-sub">
+              Up to ${power} kW • ${isCompatible ? "Matches your EV" : "Check connector"}
+            </p>
+          </div>
+          <span class="status-pill ${pillClass}">${status}</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function openStationDetails(stationId) {
+  const stations = getStationsFromStorage();
+  const station = stations.find((s) => String(s.id) === String(stationId));
+
+  if (!station) {
+    console.warn("Station not found for ID:", stationId);
+    return;
+  }
+
+  selectedStationId = station.id;
+
+  // Track active screen before switching so Back returns smoothly
+  const activeScreen = document.querySelector(".screen.active");
+  if (activeScreen && activeScreen.id !== "screen-station-details") {
+    previousScreenId = activeScreen.id;
+  }
+
+  const vehicle = getVehicleFromStorage();
+  const estimate = computeStationEstimate(station, vehicle);
+  const aggStatus = getStationAggregateStatus(station);
+
+  // Populate hero card
+  const setText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+
+  setText("detail-station-name", station.name || "Unnamed Station");
+  setText(
+    "detail-station-address",
+    station.address || station.area || "Sample City Area"
+  );
+
+  const badgeEl = document.getElementById("detail-station-status-badge");
+  if (badgeEl) {
+    badgeEl.textContent = aggStatus.label;
+    badgeEl.className = `status-pill ${aggStatus.cssClass}`;
+  }
+
+  const distanceText =
+    station.distanceKm !== undefined ? `${station.distanceKm} km` : "Sample km";
+  setText("detail-station-distance", distanceText);
+  setText("detail-station-type", station.chargerType || station.type || "DC Fast");
+  setText("detail-station-power", `${estimate.powerKw} kW`);
+  setText("detail-station-price", `₹${estimate.pricePerKwh} / kWh`);
+
+  const connectorsList = Array.isArray(station.connectors)
+    ? station.connectors.join(", ")
+    : station.connector || "CCS2";
+  setText("detail-station-connectors", `Connectors: ${connectorsList}`);
+
+  // Populate estimate preview
+  setText(
+    "detail-vehicle-label",
+    `${vehicle.name} (${vehicle.currentSoc}% → ${vehicle.targetSoc}%)`
+  );
+  setText("detail-est-energy", `${estimate.energyKwh} kWh`);
+  setText("detail-est-time", `${estimate.estimatedHours} hrs`);
+  setText("detail-est-cost", `₹${estimate.estimatedCost}`);
+
+  // Populate individual ports
+  renderStationPorts(station, vehicle.connector);
+
+  // Enable/disable Book Now based on whether any port is Available
+  const bookBtn = document.getElementById("btn-detail-book-now");
+  const hasAvailablePort = Array.isArray(station.ports) &&
+    station.ports.some((p) => normalizePortStatus(p.status) === "Available");
+
+  if (bookBtn) {
+    bookBtn.disabled = !hasAvailablePort;
+    bookBtn.querySelector("span").textContent = hasAvailablePort
+      ? "Book Charging Slot"
+      : "No Ports Available";
+  }
+
+  // Switch to Screen 5 (replace with your existing screen switcher if named differently)
+  if (typeof showScreen === "function") {
+    showScreen("screen-station-details");
+  } else {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    const target = document.getElementById("screen-station-details");
+    if (target) target.classList.add("active");
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
+
+window.openStationDetails = openStationDetails;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const backBtn = document.getElementById("btn-back-from-details");
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      if (typeof showScreen === "function") {
+        showScreen(previousScreenId);
+      } else {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        const prev = document.getElementById(previousScreenId) || document.getElementById("screen-home");
+        if (prev) prev.classList.add("active");
+      }
+    });
+  }
+
+  const bookNowBtn = document.getElementById("btn-detail-book-now");
+  if (bookNowBtn) {
+    bookNowBtn.addEventListener("click", () => {
+      if (!selectedStationId) return;
+      // Hook for upcoming Slot Booking step (Screens 11-13)
+      if (typeof openSlotBooking === "function") {
+        openSlotBooking(selectedStationId);
+      } else {
+        console.log("Ready to book station ID:", selectedStationId);
+      }
+    });
+  }
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   initDatabase();
