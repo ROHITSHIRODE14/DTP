@@ -873,3 +873,654 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+/* =========================================
+   SCREEN 7: STATION FILTERS & RESET (app.js)
+   ========================================= */
+const DEFAULT_FILTER_STATE = {
+  maxDistance: 25,       // km
+  connector: "ALL",      // ALL | CCS2 | Type 2 | CHAdeMO | Bharat DC-001
+  availableOnly: false,  // true = at least 1 Available port
+  speed: "ALL",          // ALL | AC | DC
+  maxPrice: 30           // ₹ per kWh
+};
+
+let activeStationFilters = { ...DEFAULT_FILTER_STATE };
+let filtersPreviousScreenId = "screen-explore";
+
+function getStationConnectorsList(station) {
+  if (Array.isArray(station.connectors) && station.connectors.length > 0) {
+    return station.connectors.map((c) => String(c).trim());
+  }
+  if (Array.isArray(station.ports) && station.ports.length > 0) {
+    const fromPorts = station.ports
+      .map((p) => p.connector || p.type)
+      .filter(Boolean);
+    if (fromPorts.length > 0) return [...new Set(fromPorts)];
+  }
+  return station.connector ? [String(station.connector).trim()] : ["CCS2"];
+}
+
+function getFilteredStations() {
+  const allStations = getStationsFromStorage();
+
+  return allStations.filter((station) => {
+    // 1. Distance filter (sample distanceKm)
+    const dist = Number(station.distanceKm ?? station.distance ?? 0);
+    if (dist > activeStationFilters.maxDistance) return false;
+
+    // 2. Connector filter
+    if (activeStationFilters.connector !== "ALL") {
+      const connectors = getStationConnectorsList(station).map((c) =>
+        c.toLowerCase()
+      );
+      if (!connectors.includes(activeStationFilters.connector.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // 3. Port availability filter
+    if (activeStationFilters.availableOnly) {
+      const ports = Array.isArray(station.ports) ? station.ports : [];
+      const hasOpenPort = ports.some(
+        (p) => normalizePortStatus(p.status) === "Available"
+      );
+      if (!hasOpenPort) return false;
+    }
+
+    // 4. Charging speed / type filter (AC vs DC)
+    if (activeStationFilters.speed !== "ALL") {
+      const power = Number(station.powerKw || station.power || 0);
+      const rawType = String(station.chargerType || station.type || "").toUpperCase();
+      const isDc = rawType.includes("DC") || power >= 22;
+
+      if (activeStationFilters.speed === "DC" && !isDc) return false;
+      if (activeStationFilters.speed === "AC" && isDc) return false;
+    }
+
+    // 5. Charging price filter (sample ₹/kWh)
+    const price = Number(station.pricePerKwh ?? station.price ?? 0);
+    if (price > activeStationFilters.maxPrice) return false;
+
+    return true;
+  });
+}
+
+function syncFilterInputsFromState() {
+  const distInput = document.getElementById("filter-distance");
+  const distLabel = document.getElementById("filter-distance-value");
+  const connSelect = document.getElementById("filter-connector");
+  const availCheck = document.getElementById("filter-available-only");
+  const speedSelect = document.getElementById("filter-speed");
+  const priceInput = document.getElementById("filter-max-price");
+  const priceLabel = document.getElementById("filter-price-value");
+
+  if (distInput) distInput.value = activeStationFilters.maxDistance;
+  if (distLabel) distLabel.textContent = `${activeStationFilters.maxDistance} km`;
+  if (connSelect) connSelect.value = activeStationFilters.connector;
+  if (availCheck) availCheck.checked = activeStationFilters.availableOnly;
+  if (speedSelect) speedSelect.value = activeStationFilters.speed;
+  if (priceInput) priceInput.value = activeStationFilters.maxPrice;
+  if (priceLabel) priceLabel.textContent = `₹${activeStationFilters.maxPrice}/kWh`;
+
+  updateFilterMatchCounter();
+}
+
+function readFilterStateFromInputs() {
+  const distInput = document.getElementById("filter-distance");
+  const connSelect = document.getElementById("filter-connector");
+  const availCheck = document.getElementById("filter-available-only");
+  const speedSelect = document.getElementById("filter-speed");
+  const priceInput = document.getElementById("filter-max-price");
+
+  activeStationFilters = {
+    maxDistance: distInput ? Number(distInput.value) || 25 : DEFAULT_FILTER_STATE.maxDistance,
+    connector: connSelect ? connSelect.value : DEFAULT_FILTER_STATE.connector,
+    availableOnly: availCheck ? Boolean(availCheck.checked) : DEFAULT_FILTER_STATE.availableOnly,
+    speed: speedSelect ? speedSelect.value : DEFAULT_FILTER_STATE.speed,
+    maxPrice: priceInput ? Number(priceInput.value) || 30 : DEFAULT_FILTER_STATE.maxPrice
+  };
+}
+
+function updateFilterMatchCounter() {
+  const countEl = document.getElementById("filter-result-count");
+  if (!countEl) return;
+  const matches = getFilteredStations();
+  countEl.textContent = `${matches.length} station${matches.length === 1 ? "" : "s"} match`;
+}
+
+function applyStationFiltersToUI() {
+  const filtered = getFilteredStations();
+
+  // Re-render Explore list if your existing function exists, else render clean fallback cards
+  if (typeof renderExploreStations === "function") {
+    renderExploreStations(filtered);
+  } else {
+    const exploreList = document.getElementById("explore-stations-list");
+    if (exploreList) {
+      exploreList.innerHTML =
+        filtered.length === 0
+          ? `<p class="muted-text">No sample stations match your filters. Try resetting filters.</p>`
+          : filtered
+              .map((st) => {
+                const status = getStationAggregateStatus(st);
+                return `
+                  <div class="station-card">
+                    <div class="station-card-top">
+                      <div>
+                        <h4>${st.name}</h4>
+                        <p class="muted-text">${st.area || st.address || "Sample Location"} • ${st.distanceKm ?? "--"} km</p>
+                      </div>
+                      <span class="status-pill ${status.cssClass}">${status.label}</span>
+                    </div>
+                    <p class="muted-text">${st.chargerType || "DC"} • ${st.powerKw || st.power || "--"} kW • ₹${st.pricePerKwh || st.price || "--"}/kWh</p>
+                    <button type="button" class="btn-secondary-outline" onclick="openStationDetails('${st.id}')">
+                      View Details
+                    </button>
+                  </div>
+                `;
+              })
+              .join("");
+    }
+  }
+
+  // Re-render Home stations list if helper exists
+  if (typeof renderHomeStations === "function") {
+    renderHomeStations(filtered);
+  }
+
+  // Refresh Leaflet map markers if your existing map marker updater exists
+  if (typeof renderMapMarkers === "function") {
+    renderMapMarkers(filtered);
+  }
+
+  updateFilterMatchCounter();
+  return filtered;
+}
+
+function openFiltersScreen() {
+  const activeScreen = document.querySelector(".screen.active");
+  if (activeScreen && activeScreen.id !== "screen-filters") {
+    filtersPreviousScreenId = activeScreen.id;
+  }
+
+  syncFilterInputsFromState();
+
+  if (typeof showScreen === "function") {
+    showScreen("screen-filters");
+  } else {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    const filterScreen = document.getElementById("screen-filters");
+    if (filterScreen) filterScreen.classList.add("active");
+  }
+}
+
+function resetStationFilters() {
+  activeStationFilters = { ...DEFAULT_FILTER_STATE };
+  syncFilterInputsFromState();
+  applyStationFiltersToUI();
+}
+
+window.openFiltersScreen = openFiltersScreen;
+window.resetStationFilters = resetStationFilters;
+window.getFilteredStations = getFilteredStations;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const openBtn = document.getElementById("btn-open-filters");
+  if (openBtn) {
+    openBtn.addEventListener("click", openFiltersScreen);
+  }
+
+  const backBtn = document.getElementById("btn-back-from-filters");
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      if (typeof showScreen === "function") {
+        showScreen(filtersPreviousScreenId);
+      } else {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        const prev = document.getElementById(filtersPreviousScreenId) || document.getElementById("screen-explore");
+        if (prev) prev.classList.add("active");
+      }
+    });
+  }
+
+  // Live preview updates as sliders/inputs change
+  const distInput = document.getElementById("filter-distance");
+  if (distInput) {
+    distInput.addEventListener("input", () => {
+      const distLabel = document.getElementById("filter-distance-value");
+      if (distLabel) distLabel.textContent = `${distInput.value} km`;
+      readFilterStateFromInputs();
+      updateFilterMatchCounter();
+    });
+  }
+
+  const priceInput = document.getElementById("filter-max-price");
+  if (priceInput) {
+    priceInput.addEventListener("input", () => {
+      const priceLabel = document.getElementById("filter-price-value");
+      if (priceLabel) priceLabel.textContent = `₹${priceInput.value}/kWh`;
+      readFilterStateFromInputs();
+      updateFilterMatchCounter();
+    });
+  }
+
+  ["filter-connector", "filter-available-only", "filter-speed"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", () => {
+        readFilterStateFromInputs();
+        updateFilterMatchCounter();
+      });
+    }
+  });
+
+  const applyBtn = document.getElementById("btn-apply-filters");
+  if (applyBtn) {
+    applyBtn.addEventListener("click", () => {
+      readFilterStateFromInputs();
+      applyStationFiltersToUI();
+
+      if (typeof showScreen === "function") {
+        showScreen(filtersPreviousScreenId);
+      } else {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        const prev = document.getElementById(filtersPreviousScreenId) || document.getElementById("screen-explore");
+        if (prev) prev.classList.add("active");
+      }
+    });
+  }
+
+  const resetBtn = document.getElementById("btn-reset-filters");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", resetStationFilters);
+  }
+});
+/* =========================================
+   SCREENS 8 & 9: CHARGING TIME & COST CALCULATOR (app.js)
+   ========================================= */
+let calcPreviousScreenId = "screen-home";
+
+/**
+ * Core GoEV Charging Calculator
+ * @param {Object} params
+ * @param {number} params.capacityKwh - EV battery capacity in kWh
+ * @param {number} params.currentSoc - Current state of charge (0 - 99)
+ * @param {number} params.targetSoc - Target state of charge (1 - 100)
+ * @param {number} params.chargerPowerKw - Charger output power in kW
+ * @param {number} params.pricePerKwh - Sample tariff in ₹ per kWh
+ */
+function calculateChargingEstimate({
+  capacityKwh,
+  currentSoc,
+  targetSoc,
+  chargerPowerKw,
+  pricePerKwh
+}) {
+  const cap = Number(capacityKwh);
+  const cur = Number(currentSoc);
+  const tgt = Number(targetSoc);
+  const power = Number(chargerPowerKw);
+  const rate = Number(pricePerKwh);
+
+  if (!Number.isFinite(cap) || cap <= 0) {
+    return { valid: false, error: "Battery capacity must be greater than 0 kWh." };
+  }
+  if (!Number.isFinite(cur) || cur < 0 || cur > 99) {
+    return { valid: false, error: "Current SoC must be between 0% and 99%." };
+  }
+  if (!Number.isFinite(tgt) || tgt < 1 || tgt > 100) {
+    return { valid: false, error: "Target SoC must be between 1% and 100%." };
+  }
+  if (tgt <= cur) {
+    return { valid: false, error: "Target SoC (%) must be higher than Current SoC (%)." };
+  }
+  if (!Number.isFinite(power) || power <= 0) {
+    return { valid: false, error: "Charger power must be greater than 0 kW." };
+  }
+  if (!Number.isFinite(rate) || rate < 0) {
+    return { valid: false, error: "Price per kWh cannot be negative." };
+  }
+
+  // Formula 1: Energy Required (kWh) = Battery Capacity * (Target % - Current %) / 100
+  const energyRequiredKwh = (cap * (tgt - cur)) / 100;
+
+  // Formula 2: Estimated Time (hours) = Energy Required / Charger Power
+  const estimatedHours = energyRequiredKwh / power;
+
+  // Formula 3: Estimated Cost = Energy Required * Price per kWh
+  const estimatedCost = energyRequiredKwh * rate;
+
+  const totalMinutes = Math.round(estimatedHours * 60);
+  const hrsPart = Math.floor(totalMinutes / 60);
+  const minsPart = totalMinutes % 60;
+
+  return {
+    valid: true,
+    energyRequiredKwh: Number(energyRequiredKwh.toFixed(2)),
+    estimatedHours: Number(estimatedHours.toFixed(2)),
+    formattedDuration: hrsPart > 0 ? `${hrsPart}h ${minsPart}m` : `${minsPart}m`,
+    estimatedCost: Number(estimatedCost.toFixed(2)),
+    roundedCost: Math.round(estimatedCost)
+  };
+}
+
+function setCalculatorError(msg) {
+  const errEl = document.getElementById("calc-error-msg");
+  if (!errEl) return;
+  errEl.textContent = msg || "";
+}
+
+function populateCalculatorStationDropdown(stations, selectedId = null) {
+  const selectEl = document.getElementById("calc-station-select");
+  if (!selectEl) return;
+
+  selectEl.innerHTML = stations
+    .map((st, idx) => {
+      const power = st.powerKw || st.power || 30;
+      const price = st.pricePerKwh || st.price || 15;
+      const isSelected =
+        selectedId !== null
+          ? String(st.id) === String(selectedId)
+          : idx === 0;
+      return `<option value="${st.id}" ${isSelected ? "selected" : ""}>${st.name} (${power} kW • ₹${price}/kWh)</option>`;
+    })
+    .join("");
+}
+
+function fillCalculatorFromVehicleAndStation(stationId = null) {
+  const vehicle = getVehicleFromStorage();
+  const stations = getStationsFromStorage();
+  const station =
+    stations.find((s) => String(s.id) === String(stationId || selectedStationId)) ||
+    stations[0] ||
+    {};
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  setVal("calc-capacity", vehicle.capacity);
+  setVal("calc-current-soc", vehicle.currentSoc);
+  setVal("calc-target-soc", vehicle.targetSoc);
+  setVal("calc-power", station.powerKw || station.power || 30);
+  setVal("calc-price", station.pricePerKwh || station.price || 15);
+
+  populateCalculatorStationDropdown(stations, station.id);
+}
+
+function runAndRenderCalculator() {
+  const cap = document.getElementById("calc-capacity")?.value;
+  const cur = document.getElementById("calc-current-soc")?.value;
+  const tgt = document.getElementById("calc-target-soc")?.value;
+  const power = document.getElementById("calc-power")?.value;
+  const price = document.getElementById("calc-price")?.value;
+
+  const result = calculateChargingEstimate({
+    capacityKwh: cap,
+    currentSoc: cur,
+    targetSoc: tgt,
+    chargerPowerKw: power,
+    pricePerKwh: price
+  });
+
+  const energyOut = document.getElementById("calc-energy-out");
+  const timeOut = document.getElementById("calc-time-out");
+  const costOut = document.getElementById("calc-cost-out");
+
+  if (!result.valid) {
+    setCalculatorError(result.error);
+    if (energyOut) energyOut.textContent = "-- kWh";
+    if (timeOut) timeOut.textContent = "-- hrs";
+    if (costOut) costOut.textContent = "₹--";
+    return result;
+  }
+
+  setCalculatorError("");
+  if (energyOut) energyOut.textContent = `${result.energyRequiredKwh} kWh`;
+  if (timeOut) {
+    timeOut.textContent = `${result.estimatedHours} hrs (${result.formattedDuration})`;
+  }
+  if (costOut) costOut.textContent = `₹${result.roundedCost}`;
+
+  return result;
+}
+
+function openCalculatorScreen(stationId = null) {
+  const activeScreen = document.querySelector(".screen.active");
+  if (activeScreen && activeScreen.id !== "screen-calculator") {
+    calcPreviousScreenId = activeScreen.id;
+  }
+
+  fillCalculatorFromVehicleAndStation(stationId);
+  runAndRenderCalculator();
+
+  if (typeof showScreen === "function") {
+    showScreen("screen-calculator");
+  } else {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    const calcScreen = document.getElementById("screen-calculator");
+    if (calcScreen) calcScreen.classList.add("active");
+  }
+}
+
+window.calculateChargingEstimate = calculateChargingEstimate;
+window.openCalculatorScreen = openCalculatorScreen;
+window.runAndRenderCalculator = runAndRenderCalculator;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const backCalcBtn = document.getElementById("btn-back-from-calc");
+  if (backCalcBtn) {
+    backCalcBtn.addEventListener("click", () => {
+      if (typeof showScreen === "function") {
+        showScreen(calcPreviousScreenId);
+      } else {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        const prev =
+          document.getElementById(calcPreviousScreenId) ||
+          document.getElementById("screen-home");
+        if (prev) prev.classList.add("active");
+      }
+    });
+  }
+
+  const useVehicleBtn = document.getElementById("btn-calc-use-vehicle");
+  if (useVehicleBtn) {
+    useVehicleBtn.addEventListener("click", () => {
+      const selectedId = document.getElementById("calc-station-select")?.value || null;
+      fillCalculatorFromVehicleAndStation(selectedId);
+      runAndRenderCalculator();
+    });
+  }
+
+  const stationSelect = document.getElementById("calc-station-select");
+  if (stationSelect) {
+    stationSelect.addEventListener("change", () => {
+      const stations = getStationsFromStorage();
+      const chosen = stations.find((s) => String(s.id) === String(stationSelect.value));
+      if (chosen) {
+        const powerEl = document.getElementById("calc-power");
+        const priceEl = document.getElementById("calc-price");
+        if (powerEl) powerEl.value = chosen.powerKw || chosen.power || 30;
+        if (priceEl) priceEl.value = chosen.pricePerKwh || chosen.price || 15;
+      }
+      runAndRenderCalculator();
+    });
+  }
+
+  const computeBtn = document.getElementById("btn-calc-compute");
+  if (computeBtn) {
+    computeBtn.addEventListener("click", runAndRenderCalculator);
+  }
+
+  ["calc-capacity", "calc-current-soc", "calc-target-soc", "calc-power", "calc-price"].forEach(
+    (id) => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.addEventListener("input", runAndRenderCalculator);
+      }
+    }
+  );
+});
+/* =========================================
+   SCREEN 10: RULE-BASED RECOMMENDATION (app.js)
+   Deterministic scoring — explicitly rule-based, not AI.
+   ========================================= */
+
+/**
+ * Scores a single station using transparent, deterministic rules.
+ * Max possible score = 100 points:
+ *  - Connector match: up to 30 pts
+ *  - Available ports: up to 25 pts
+ *  - Distance (closer is better, sample km): up to 20 pts
+ *  - Charging speed (higher kW is faster): up to 15 pts
+ *  - Tariff price (lower ₹/kWh is cheaper): up to 10 pts
+ */
+function scoreStationRuleBased(station, vehicle) {
+  let score = 0;
+  const reasons = [];
+
+  const vehicleConnector = String(vehicle?.connector || "CCS2").toLowerCase();
+  const stationConnectors = getStationConnectorsList(station).map((c) =>
+    c.toLowerCase()
+  );
+
+  // Rule 1: Connector compatibility (30 pts)
+  const hasMatchingConnector = stationConnectors.includes(vehicleConnector);
+  if (hasMatchingConnector) {
+    score += 30;
+    reasons.push(`Supports your ${vehicle?.connector || "CCS2"} connector`);
+  } else {
+    score += 5;
+    reasons.push(`Check adapter for ${vehicle?.connector || "CCS2"}`);
+  }
+
+  // Rule 2: Available ports (25 pts)
+  const ports = Array.isArray(station.ports) ? station.ports : [];
+  const availablePortsCount = ports.filter(
+    (p) => normalizePortStatus(p.status) === "Available"
+  ).length;
+
+  if (availablePortsCount > 0) {
+    const portPoints = Math.min(25, 15 + availablePortsCount * 5);
+    score += portPoints;
+    reasons.push(
+      `${availablePortsCount} open port${availablePortsCount > 1 ? "s" : ""} ready`
+    );
+  } else {
+    reasons.push("No open ports currently available");
+  }
+
+  // Rule 3: Sample distance proximity (20 pts)
+  const distKm = Number(station.distanceKm ?? station.distance ?? 10);
+  const clampedDist = Math.max(0, Math.min(25, distKm));
+  const distPoints = Math.round(((25 - clampedDist) / 25) * 20);
+  score += distPoints;
+  reasons.push(`${distKm} km away (sample distance)`);
+
+  // Rule 4: Charging speed in kW (15 pts)
+  const powerKw = Number(station.powerKw ?? station.power ?? 22);
+  const clampedPower = Math.max(0, Math.min(120, powerKw));
+  const speedPoints = Math.round((clampedPower / 120) * 15);
+  score += speedPoints;
+  reasons.push(`${powerKw} kW charging output`);
+
+  // Rule 5: Tariff price per kWh (10 pts)
+  const pricePerKwh = Number(station.pricePerKwh ?? station.price ?? 16);
+  const clampedPrice = Math.max(5, Math.min(30, pricePerKwh));
+  const pricePoints = Math.round(((30 - clampedPrice) / 25) * 10);
+  score += pricePoints;
+  reasons.push(`₹${pricePerKwh}/kWh sample tariff`);
+
+  return {
+    station,
+    score,
+    availablePortsCount,
+    hasMatchingConnector,
+    reasons
+  };
+}
+
+function getRecommendedStationRuleBased(stationsList = null) {
+  const stations = Array.isArray(stationsList)
+    ? stationsList
+    : getStationsFromStorage();
+
+  if (!stations || stations.length === 0) return null;
+
+  const vehicle = getVehicleFromStorage();
+  const ranked = stations
+    .map((station) => scoreStationRuleBased(station, vehicle))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.availablePortsCount !== a.availablePortsCount) {
+        return b.availablePortsCount - a.availablePortsCount;
+      }
+      const distA = Number(a.station.distanceKm ?? a.station.distance ?? 999);
+      const distB = Number(b.station.distanceKm ?? b.station.distance ?? 999);
+      return distA - distB;
+    });
+
+  return ranked[0];
+}
+
+function renderRuleBasedRecommendation(stationsList = null) {
+  const recCard = document.getElementById("home-recommended-card");
+  const topPick = getRecommendedStationRuleBased(stationsList);
+
+  if (!topPick) {
+    if (recCard) {
+      recCard.innerHTML = `<p class="muted-text">No stations available for rule-based recommendation.</p>`;
+    }
+    return null;
+  }
+
+  const { station, score, reasons } = topPick;
+  const estimate = computeStationEstimate(station, getVehicleFromStorage());
+  const topReasons = reasons.slice(0, 3);
+
+  // Update optional dedicated elements if Sakshi included them
+  const nameEl = document.getElementById("rec-station-name");
+  const scoreEl = document.getElementById("rec-station-score");
+  const reasonsEl = document.getElementById("rec-station-reasons");
+  const badgeEl = document.getElementById("rec-mode-badge");
+
+  if (nameEl) nameEl.textContent = station.name;
+  if (scoreEl) scoreEl.textContent = `Rule Score: ${score}/100`;
+  if (badgeEl) badgeEl.textContent = "Rule-Based Logic (Not AI)";
+  if (reasonsEl) {
+    reasonsEl.innerHTML = reasons.map((r) => `<li>${r}</li>`).join("");
+  }
+
+  // Render clean summary inside #home-recommended-card
+  if (recCard) {
+    recCard.innerHTML = `
+      <div class="rec-card-header">
+        <div>
+          <span class="rec-badge">Rule-Based Pick (Not AI) • ${score}/100</span>
+          <h3 class="rec-title">${station.name}</h3>
+          <p class="muted-text">${station.area || station.address || "Sample Location"} • ${station.distanceKm ?? "--"} km • ${station.powerKw || station.power || "--"} kW • ₹${station.pricePerKwh || station.price || "--"}/kWh</p>
+        </div>
+      </div>
+      <ul class="rec-reasons-list">
+        ${topReasons.map((reason) => `<li>${reason}</li>`).join("")}
+      </ul>
+      <div class="rec-card-footer">
+        <span class="muted-text">Est. Cost: <strong>₹${estimate.estimatedCost}</strong> (${estimate.energyKwh} kWh)</span>
+        <button type="button" class="btn-primary-action" onclick="openStationDetails('${station.id}')">
+          View Details
+        </button>
+      </div>
+    `;
+  }
+
+  return topPick;
+}
+
+window.scoreStationRuleBased = scoreStationRuleBased;
+window.getRecommendedStationRuleBased = getRecommendedStationRuleBased;
+window.renderRuleBasedRecommendation = renderRuleBasedRecommendation;
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderRuleBasedRecommendation();
+});
