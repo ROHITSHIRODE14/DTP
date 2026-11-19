@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GoEV — Find. Charge. Go. | Team EVenture</title>
+
+  <!-- Google Fonts: Poppins & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet.js CSS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Mobile App Viewport Container -->
+  <div class="app-shell">
+
+    <!-- Top Prototype Disclaimer Banner -->
+    <div class="demo-banner">
+      <span>⚡ Student Prototype (Simulated Data) • Team EVenture</span>
+    </div>
+
+    <!-- SCREEN 1: SPLASH SCREEN -->
+    <section id="screen-splash" class="screen active splash-screen">
+      <div class="splash-content">
+        <div class="logo-badge pulse-anim">
+          <i data-lucide="zap" class="logo-icon"></i>
+        </div>
+        <h1 class="brand-title">Go<span>EV</span></h1>
+        <p class="tagline">Find. Charge. Go.</p>
+        <p class="splash-sub">
+          Smart EV Charging Station Finder, Time &amp; Cost Estimator, and Instant Slot Booking.
+        </p>
+
+        <button id="btn-get-started" class="btn-primary">
+          <span>Get Started</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+
+        <div class="team-credit">
+          <small>Built by <strong>Team EVenture</strong> • 1st Year Engineering Project</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: LOGIN / SIGN UP -->
+    <section id="screen-auth" class="screen auth-screen">
+      <div class="auth-header">
+        <div class="auth-logo-row">
+          <div class="mini-logo">
+            <i data-lucide="zap"></i>
+          </div>
+          <div>
+            <h2 class="auth-brand">Go<span>EV</span></h2>
+            <p class="auth-tagline">Find. Charge. Go.</p>
+          </div>
+        </div>
+        <p class="auth-subtitle">Sign in or create a prototype account to find chargers and book slots.</p>
+      </div>
+
+      <div class="auth-card">
+        <!-- Mode Switcher: Login vs Sign Up -->
+        <div class="auth-tabs">
+          <button type="button" id="tab-login" class="auth-tab active">Login</button>
+          <button type="button" id="tab-signup" class="auth-tab">Sign Up</button>
+        </div>
+
+        <form id="auth-form" class="auth-form">
+          <div id="field-name-group" class="form-group hidden">
+            <label for="auth-name">Full Name</label>
+            <input type="text" id="auth-name" placeholder="Enter your name" />
+          </div>
+
+          <div class="form-group">
+            <label for="auth-email">Email Address</label>
+            <input type="email" id="auth-email" placeholder="driver@example.com" required />
+          </div>
+
+          <div class="form-group">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" placeholder="Enter password" required />
+          </div>
+
+          <p id="auth-message" class="auth-message"></p>
+
+          <button type="submit" id="btn-auth-submit" class="btn-primary">
+            <span id="btn-auth-label">Login</span>
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="divider"><span>OR</span></div>
+
+        <button type="button" id="btn-continue-demo" class="btn-outline">
+          <span>Continue as Demo Driver</span>
+        </button>
+
+        <div class="auth-note">
+          <i data-lucide="info"></i>
+          <small>
+            <strong>Prototype Auth Notice:</strong> Uses local browser storage for demonstration only—not production-grade security or real encrypted authentication.
+          </small>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLACEHOLDER FOR HOME DASHBOARD (NEXT STEP) -->
+    <!-- SCREEN 3: HOME DASHBOARD -->
+    <section id="screen-home" class="screen home-screen">
+      <div class="home-top-banner">
+        <div class="home-top-row">
+          <div>
+            <p class="home-welcome-label">Welcome to GoEV</p>
+            <h2 id="home-user-name" class="home-user-title">EV Driver</h2>
+          </div>
+          <span class="badge-sample">Sample Data</span>
+        </div>
+
+        <div class="location-pill">
+          <i data-lucide="map-pin"></i>
+          <span>Sample Area: Pimpri-Chinchwad Demo Zone (Not Live GPS)</span>
+        </div>
+
+        <div class="home-search-box">
+          <i data-lucide="search"></i>
+          <input
+            type="text"
+            id="home-search-input"
+            placeholder="Find charging stations near you"
+          />
+          <button type="button" id="btn-home-search-clear" class="clear-search-btn" title="Clear">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="home-body">
+        <!-- Quick Action Buttons -->
+        <div class="quick-actions-grid">
+          <button type="button" id="btn-quick-map" class="quick-action-btn">
+            <div class="qa-icon teal-bg"><i data-lucide="map"></i></div>
+            <span>Explore Map</span>
+          </button>
+          <button type="button" id="btn-quick-vehicle" class="quick-action-btn">
+            <div class="qa-icon navy-bg"><i data-lucide="car"></i></div>
+            <span>My Vehicle</span>
+          </button>
+          <button type="button" id="btn-quick-bookings" class="quick-action-btn">
+            <div class="qa-icon green-bg"><i data-lucide="calendar-check"></i></div>
+            <span>My Bookings</span>
+          </button>
+        </div>
+
+        <!-- Recommended Station Card (Basic Rule-Based) -->
+        <div class="section-block">
+          <div class="section-heading-row">
+            <h3>Recommended Station</h3>
+            <span class="rule-tag">Rule-Based Pick</span>
+          </div>
+          <div id="home-recommended-card" class="recommended-card"></div>
+        </div>
+
+        <!-- Nearby Charging Station Cards -->
+        <div class="section-block">
+          <div class="section-heading-row">
+            <h3>Nearby Charging Stations</h3>
+            <small id="home-station-count" class="muted-count">8 stations</small>
+          </div>
+          <div id="home-stations-list" class="station-cards-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 4: INTERACTIVE MAP (EXPLORE) -->
+    <section id="screen-explore" class="screen explore-screen">
+      <div class="subscreen-header">
+        <div>
+          <h2>Explore Stations</h2>
+          <p class="subscreen-subtitle">Fictional sample markers • Not live GPS</p>
+        </div>
+        <span class="badge-sample">Map View</span>
+      </div>
+
+      <div class="map-legend">
+        <span class="legend-item"><i class="dot dot-green"></i>Available</span>
+        <span class="legend-item"><i class="dot dot-red"></i>Occupied</span>
+        <span class="legend-item"><i class="dot dot-orange"></i>Reserved</span>
+        <span class="legend-item"><i class="dot dot-grey"></i>Unavailable</span>
+      </div>
+
+      <div class="map-container-wrap">
+        <div id="goev-map" class="goev-map"></div>
+        <div id="map-fallback-box" class="map-fallback-box hidden">
+          <div class="fallback-title">Offline / Fallback Sample Map Grid</div>
+          <p class="fallback-desc">Map tiles require internet access. Use the interactive sample station pins or list below.</p>
+          <div id="fallback-pins" class="fallback-pins"></div>
+        </div>
+      </div>
+
+      <div class="explore-list-section">
+        <div class="section-heading-row">
+          <h3>Sample Stations List</h3>
+          <small id="explore-station-count" class="muted-count">8 stations</small>
+        </div>
+        <div id="explore-stations-list" class="station-cards-list"></div>
+      </div>
+    </section>
+
+    <!-- BOTTOM NAVIGATION BAR -->
+    <nav id="bottom-nav" class="bottom-nav hidden">
+      <button class="nav-item active" data-target="screen-home">
+        <i data-lucide="home"></i>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-target="screen-explore">
+        <i data-lucide="map-pin"></i>
+        <span>Explore</span>
+      </button>
+      <button class="nav-item" data-target="screen-vehicle">
+        <i data-lucide="car"></i>
+        <span>My Vehicle</span>
+      </button>
+      <button class="nav-item" data-target="screen-bookings">
+        <i data-lucide="calendar-check"></i>
+        <span>Bookings</span>
+      </button>
+      <button class="nav-item" data-target="screen-profile">
+        <i data-lucide="user"></i>
+        <span>Profile</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Leaflet.js Script -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- App Data & Logic -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
