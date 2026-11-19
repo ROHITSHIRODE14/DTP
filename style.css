@@ -1144,3 +1144,341 @@ body {
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* =========================================
+   SCREEN 10: RULE-BASED RECOMMENDATION CARD
+   ========================================= */
+#home-recommended-card {
+  background: linear-gradient(
+    145deg,
+    rgba(22, 166, 160, 0.14),
+    rgba(16, 29, 43, 0.92)
+  );
+  border: 1px solid rgba(22, 199, 132, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  color: var(--text-primary, #F4F8FB);
+}
+
+.rec-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.rec-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: #08121C;
+  background: linear-gradient(
+    135deg,
+    var(--green, #16C784),
+    var(--teal, #16A6A0)
+  );
+  margin-bottom: 8px;
+}
+
+.rec-title {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary, #F4F8FB);
+}
+
+.rec-reasons-list {
+  margin: 10px 0 14px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: var(--text-primary, #F4F8FB);
+}
+
+.rec-reasons-list li::marker {
+  color: var(--green, #16C784);
+}
+
+.rec-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  flex-wrap: wrap;
+}
+
+.rec-card-footer strong {
+  color: var(--green, #16C784);
+}
+/* =========================================
+   SCREENS 6, 8 & 9: EV PROFILE & CHARGING CALCULATORS
+   ========================================= */
+#screen-vehicle,
+#screen-calculator {
+  background: var(--bg-navy, #101D2B);
+  color: var(--text-primary, #F4F8FB);
+  padding-bottom: 84px;
+}
+
+.vehicle-card,
+.calc-card,
+.calc-result-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted, #9FB0C3);
+}
+
+.form-input,
+.form-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(16, 29, 43, 0.85);
+  color: var(--text-primary, #F4F8FB);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--green, #16C784);
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.calc-output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.calc-metric-box {
+  background: rgba(16, 29, 43, 0.72);
+  border: 1px solid rgba(22, 166, 160, 0.25);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calc-metric-label {
+  font-size: 0.72rem;
+  color: var(--text-muted, #9FB0C3);
+}
+
+.calc-metric-value {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--green, #16C784);
+}
+
+.btn-save-secondary {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(22, 166, 160, 0.45);
+  background: rgba(22, 166, 160, 0.14);
+  color: var(--text-primary, #F4F8FB);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-save-secondary:hover {
+  border-color: var(--green, #16C784);
+}
+
+.form-feedback-msg {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--green, #16C784);
+}
+
+.form-error-msg {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #F87171;
+}
+/* =========================================
+   SCREENS 7, 11, 12 & 13: FILTERS, SLOT BOOKING & ADVANCE PAYMENT
+   ========================================= */
+.filters-bar-card,
+.booking-card,
+.payment-breakdown-card,
+.confirmation-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.filters-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-reset-filters {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary, #F4F8FB);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-reset-filters:hover {
+  border-color: var(--teal, #16A6A0);
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.slot-pill-btn {
+  padding: 9px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(16, 29, 43, 0.75);
+  color: var(--text-primary, #F4F8FB);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.slot-pill-btn.active,
+.slot-pill-btn[aria-pressed="true"] {
+  background: rgba(22, 199, 132, 0.18);
+  border-color: var(--green, #16C784);
+  color: var(--green, #16C784);
+}
+
+.slot-pill-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.86rem;
+}
+
+.payment-row:last-child {
+  border-bottom: none;
+}
+
+.payment-row--highlight strong {
+  color: var(--green, #16C784);
+  font-size: 1rem;
+}
+
+.confirmation-card {
+  border-color: rgba(22, 199, 132, 0.45);
+  background: linear-gradient(
+    145deg,
+    rgba(22, 199, 132, 0.12),
+    rgba(16, 29, 43, 0.94)
+  );
+}
+
+.booking-id-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(22, 166, 160, 0.2);
+  color: var(--teal, #16A6A0);
+  border: 1px solid rgba(22, 166, 160, 0.4);
+  margin-bottom: 8px;
+}/* =========================================
+   SCREENS 14 & 15: BOOKINGS HISTORY & USER PROFILE
+   ========================================= */
+#screen-bookings,
+#screen-profile {
+  background: var(--bg-navy, #101D2B);
+  color: var(--text-primary, #F4F8FB);
+  padding-bottom: 88px;
+}
+
+.bookings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.booking-history-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 15px;
+}
+
+.booking-history-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.booking-station-title {
+  margin: 0 0 3px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.booking-meta-text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #9FB0C
+             
