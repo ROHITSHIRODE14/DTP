@@ -684,3 +684,192 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
+/* =========================================
+   SCREEN 6: EV VEHICLE PROFILE (#screen-vehicle)
+   ========================================= */
+const DEFAULT_GOEV_VEHICLE = {
+  name: "Tata Nexon EV",
+  capacity: 40,
+  currentSoc: 30,
+  targetSoc: 80,
+  connector: "CCS2"
+};
+
+let vehiclePreviousScreenId = "screen-home";
+
+function saveVehicleToStorage(vehicleObj) {
+  try {
+    localStorage.setItem("goev_vehicle", JSON.stringify(vehicleObj));
+    return true;
+  } catch (err) {
+    console.error("Failed to save goev_vehicle to LocalStorage:", err);
+    return false;
+  }
+}
+
+function renderVehicleSummary(vehicle) {
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  setText("vehicle-display-name", vehicle.name);
+  setText("vehicle-display-connector", vehicle.connector);
+  setText("vehicle-display-capacity", `${vehicle.capacity} kWh`);
+  setText("vehicle-display-current", `${vehicle.currentSoc}%`);
+  setText("vehicle-display-target", `${vehicle.targetSoc}%`);
+}
+
+function populateVehicleForm(vehicle) {
+  const nameInput = document.getElementById("vehicle-name-input");
+  const capInput = document.getElementById("vehicle-capacity-input");
+  const curInput = document.getElementById("vehicle-current-soc-input");
+  const tgtInput = document.getElementById("vehicle-target-soc-input");
+  const connSelect = document.getElementById("vehicle-connector-select");
+
+  if (nameInput) nameInput.value = vehicle.name;
+  if (capInput) capInput.value = vehicle.capacity;
+  if (curInput) curInput.value = vehicle.currentSoc;
+  if (tgtInput) tgtInput.value = vehicle.targetSoc;
+  if (connSelect) connSelect.value = vehicle.connector;
+}
+
+function setVehicleFeedback(message, type = "success") {
+  const feedbackEl = document.getElementById("vehicle-form-feedback");
+  if (!feedbackEl) return;
+  feedbackEl.textContent = message;
+  feedbackEl.className = `form-feedback ${
+    type === "error" ? "form-feedback--error" : "form-feedback--success"
+  }`;
+}
+
+function openVehicleScreen() {
+  const activeScreen = document.querySelector(".screen.active");
+  if (activeScreen && activeScreen.id !== "screen-vehicle") {
+    vehiclePreviousScreenId = activeScreen.id;
+  }
+
+  const currentVehicle = getVehicleFromStorage();
+  renderVehicleSummary(currentVehicle);
+  populateVehicleForm(currentVehicle);
+  setVehicleFeedback("", "success");
+
+  if (typeof showScreen === "function") {
+    showScreen("screen-vehicle");
+  } else {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    const target = document.getElementById("screen-vehicle");
+    if (target) target.classList.add("active");
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
+
+window.openVehicleScreen = openVehicleScreen;
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize default vehicle if missing
+  if (!localStorage.getItem("goev_vehicle")) {
+    saveVehicleToStorage(DEFAULT_GOEV_VEHICLE);
+  }
+
+  const quickVehicleBtn = document.getElementById("btn-quick-vehicle");
+  if (quickVehicleBtn) {
+    quickVehicleBtn.addEventListener("click", openVehicleScreen);
+  }
+
+  const backVehicleBtn = document.getElementById("btn-back-from-vehicle");
+  if (backVehicleBtn) {
+    backVehicleBtn.addEventListener("click", () => {
+      if (typeof showScreen === "function") {
+        showScreen(vehiclePreviousScreenId);
+      } else {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        const prev =
+          document.getElementById(vehiclePreviousScreenId) ||
+          document.getElementById("screen-home");
+        if (prev) prev.classList.add("active");
+      }
+    });
+  }
+
+  const resetDefaultBtn = document.getElementById("btn-vehicle-reset-default");
+  if (resetDefaultBtn) {
+    resetDefaultBtn.addEventListener("click", () => {
+      saveVehicleToStorage(DEFAULT_GOEV_VEHICLE);
+      renderVehicleSummary(DEFAULT_GOEV_VEHICLE);
+      populateVehicleForm(DEFAULT_GOEV_VEHICLE);
+      setVehicleFeedback("Reset to default Tata Nexon EV profile.", "success");
+    });
+  }
+
+  const vehicleForm = document.getElementById("vehicle-form");
+  if (vehicleForm) {
+    vehicleForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      const rawName = (document.getElementById("vehicle-name-input")?.value || "").trim();
+      const capacity = Number(document.getElementById("vehicle-capacity-input")?.value);
+      const currentSoc = Number(document.getElementById("vehicle-current-soc-input")?.value);
+      const targetSoc = Number(document.getElementById("vehicle-target-soc-input")?.value);
+      const connector = document.getElementById("vehicle-connector-select")?.value || "CCS2";
+
+      if (!rawName) {
+        setVehicleFeedback("Please enter a vehicle name.", "error");
+        return;
+      }
+      if (!Number.isFinite(capacity) || capacity <= 0 || capacity > 250) {
+        setVehicleFeedback("Battery capacity must be between 1 and 250 kWh.", "error");
+        return;
+      }
+      if (!Number.isFinite(currentSoc) || currentSoc < 0 || currentSoc > 99) {
+        setVehicleFeedback("Current charge must be between 0% and 99%.", "error");
+        return;
+      }
+      if (!Number.isFinite(targetSoc) || targetSoc < 1 || targetSoc > 100) {
+        setVehicleFeedback("Target charge must be between 1% and 100%.", "error");
+        return;
+      }
+      if (targetSoc <= currentSoc) {
+        setVehicleFeedback("Target charge (%) must be greater than current charge (%).", "error");
+        return;
+      }
+
+      const updatedVehicle = {
+        name: rawName,
+        capacity: Number(capacity.toFixed(1)),
+        currentSoc: Math.round(currentSoc),
+        targetSoc: Math.round(targetSoc),
+        connector
+      };
+
+      if (saveVehicleToStorage(updatedVehicle)) {
+        renderVehicleSummary(updatedVehicle);
+        setVehicleFeedback("EV profile saved to LocalStorage.", "success");
+
+        // Refresh open station details estimate if currently selected
+        if (selectedStationId) {
+          const stations = getStationsFromStorage();
+          const station = stations.find((s) => String(s.id) === String(selectedStationId));
+          if (station) {
+            const est = computeStationEstimate(station, updatedVehicle);
+            const vLabel = document.getElementById("detail-vehicle-label");
+            const eVal = document.getElementById("detail-est-energy");
+            const tVal = document.getElementById("detail-est-time");
+            const cVal = document.getElementById("detail-est-cost");
+            if (vLabel) {
+              vLabel.textContent = `${updatedVehicle.name} (${updatedVehicle.currentSoc}% → ${updatedVehicle.targetSoc}%)`;
+            }
+            if (eVal) eVal.textContent = `${est.energyKwh} kWh`;
+            if (tVal) tVal.textContent = `${est.estimatedHours} hrs`;
+            if (cVal) cVal.textContent = `₹${est.estimatedCost}`;
+          }
+        }
+      } else {
+        setVehicleFeedback("Could not save vehicle profile.", "error");
+      }
+    });
+  }
+});
