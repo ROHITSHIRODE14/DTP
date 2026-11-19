@@ -214,6 +214,98 @@
         <div id="explore-stations-list" class="station-cards-list"></div>
       </div>
     </section>
+    <!-- SCREEN 5: STATION DETAILS -->
+<section id="screen-station-details" class="screen" aria-label="Station Details">
+  <header class="detail-header">
+    <button type="button" id="btn-back-from-details" class="btn-icon-back" aria-label="Back to previous screen">
+      <i data-lucide="arrow-left"></i>
+      <span>Back</span>
+    </button>
+    <h2 class="screen-title">Station Details</h2>
+    <span class="badge-sample-tag">Sample Data</span>
+  </header>
+
+  <div class="detail-content">
+    <!-- Station Summary Card -->
+    <article class="card detail-hero-card">
+      <div class="detail-top-row">
+        <div>
+          <h3 id="detail-station-name" class="detail-station-name">Station Name</h3>
+          <p id="detail-station-address" class="detail-station-address">Sample Address</p>
+        </div>
+        <span id="detail-station-status-badge" class="status-pill">Status</span>
+      </div>
+
+      <div class="detail-meta-grid">
+        <div class="meta-box">
+          <span class="meta-label">Distance (Sample)</span>
+          <strong id="detail-station-distance" class="meta-value">-- km</strong>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Charger Type</span>
+          <strong id="detail-station-type" class="meta-value">--</strong>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Max Power</span>
+          <strong id="detail-station-power" class="meta-value">-- kW</strong>
+        </div>
+        <div class="meta-box">
+          <span class="meta-label">Tariff (Sample)</span>
+          <strong id="detail-station-price" class="meta-value">₹-- / kWh</strong>
+        </div>
+      </div>
+
+      <p id="detail-station-connectors" class="detail-connectors-text">
+        Connectors: --
+      </p>
+    </article>
+
+    <!-- Charging Estimate Preview (Uses goev_vehicle) -->
+    <article class="card detail-estimate-card">
+      <div class="card-header-row">
+        <h4 class="section-heading">Estimated Charge (Your EV)</h4>
+        <span id="detail-vehicle-label" class="muted-text">Tata Nexon EV</span>
+      </div>
+
+      <div class="estimate-summary-row">
+        <div>
+          <span class="muted-text">Energy Needed</span>
+          <strong id="detail-est-energy" class="estimate-val">-- kWh</strong>
+        </div>
+        <div>
+          <span class="muted-text">Est. Time</span>
+          <strong id="detail-est-time" class="estimate-val">-- hrs</strong>
+        </div>
+        <div>
+          <span class="muted-text">Est. Cost (Sample Rate)</span>
+          <strong id="detail-est-cost" class="estimate-val highlight-green">₹--</strong>
+        </div>
+      </div>
+      <p class="disclaimer-note">
+        * Estimates use your saved EV profile and sample tariff rates. Actual charging time varies due to battery charging curves.
+      </p>
+    </article>
+
+    <!-- Individual Charging Ports List -->
+    <article class="card detail-ports-card">
+      <div class="card-header-row">
+        <h4 class="section-heading">Charging Ports</h4>
+        <span id="detail-ports-count" class="muted-text">0 ports</span>
+      </div>
+      <div id="detail-ports-list" class="ports-list">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </article>
+  </div>
+
+  <!-- Sticky Bottom Action Bar -->
+  <div class="detail-action-bar">
+    <button type="button" id="btn-detail-book-now" class="btn-primary-action">
+      <i data-lucide="zap"></i>
+      <span>Book Now</span>
+    </button>
+  </div>
+</section>
 
     <!-- BOTTOM NAVIGATION BAR -->
     <nav id="bottom-nav" class="bottom-nav hidden">
