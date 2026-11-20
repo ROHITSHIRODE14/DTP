@@ -142,7 +142,6 @@
       </div>
 
       <div class="home-body">
-        <!-- Quick Action Buttons -->
         <div class="quick-actions-grid">
           <button type="button" id="btn-quick-map" class="quick-action-btn">
             <div class="qa-icon teal-bg"><i data-lucide="map"></i></div>
@@ -158,16 +157,14 @@
           </button>
         </div>
 
-        <!-- SCREEN 10: Recommended Station Card (Rule-Based, Not AI) -->
         <div class="section-block">
           <div class="section-heading-row">
             <h3>Recommended Station</h3>
-            <span class="rule-tag">Rule-Based Logic (Not AI)</span>
+            <span id="rec-mode-badge" class="rule-tag">Rule-Based Logic (Not AI)</span>
           </div>
           <div id="home-recommended-card" class="recommended-card"></div>
         </div>
 
-        <!-- Nearby Charging Station Cards -->
         <div class="section-block">
           <div class="section-heading-row">
             <h3>Nearby Charging Stations</h3>
@@ -297,6 +294,87 @@
           <i data-lucide="zap"></i>
           <span>Book Charging Slot</span>
         </button>
+      </div>
+    </section>
+
+    <!-- SCREENS 11, 12 & 13: SLOT BOOKING, 20% ADVANCE SIMULATION & CONFIRMATION -->
+    <section id="screen-booking" class="screen" aria-label="Slot Booking and Simulated Advance Payment">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-booking" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">Book Charging Slot</h2>
+        <span class="sample-badge">Simulated</span>
+      </header>
+
+      <div class="screen-body">
+        <article class="booking-card">
+          <h3 id="booking-station-name" class="detail-station-name">Station Name</h3>
+          <p id="booking-station-meta" class="muted-text" style="margin-bottom:8px;">Sample Area</p>
+          <p id="booking-vehicle-summary" class="muted-text">EV: Tata Nexon EV</p>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label for="booking-port-select">Select Charging Port</label>
+            <select id="booking-port-select"></select>
+            <small id="booking-port-status-note" class="muted-text"></small>
+          </div>
+
+          <div class="form-group">
+            <label for="booking-date-input">Select Date</label>
+            <input type="date" id="booking-date-input" />
+          </div>
+
+          <div class="form-group">
+            <label>Select Time Slot (Sample)</label>
+            <div id="booking-slots-list" class="slots-grid"></div>
+          </div>
+        </article>
+
+        <article class="payment-breakdown-card">
+          <h4 class="section-heading" style="margin-bottom:10px;">Estimate &amp; 20% Advance Simulation</h4>
+
+          <div class="payment-row">
+            <span class="muted-text">Estimated Energy</span>
+            <strong id="booking-est-energy-val">-- kWh</strong>
+          </div>
+          <div class="payment-row">
+            <span class="muted-text">Estimated Time</span>
+            <strong id="booking-est-time-val">-- hrs</strong>
+          </div>
+          <div class="payment-row">
+            <span class="muted-text">Estimated Full Charge Cost</span>
+            <strong id="booking-est-cost-val">₹--</strong>
+          </div>
+          <div class="payment-row payment-row--highlight">
+            <span>Simulated Advance Due (20%)</span>
+            <strong id="booking-advance-val">₹--</strong>
+          </div>
+          <div class="payment-row">
+            <span class="muted-text">Remaining Balance at Station (80%)</span>
+            <strong id="booking-remaining-val">₹--</strong>
+          </div>
+
+          <p id="booking-error-msg" class="form-error-msg" aria-live="polite"></p>
+
+          <button type="button" id="btn-simulate-payment" class="btn-primary-action">
+            <i data-lucide="shield-check"></i>
+            <span>Simulate 20% Advance Payment</span>
+          </button>
+
+          <p class="disclaimer-text">
+            Simulation Notice: No real payment or gateway transaction occurs. Clicking Simulate marks the selected port Reserved in LocalStorage and saves a sample booking record.
+          </p>
+        </article>
+
+        <!-- SCREEN 13: BOOKING CONFIRMATION CARD -->
+        <article id="booking-confirmation-card" class="confirmation-card hidden" aria-live="polite">
+          <span class="booking-id-badge" id="conf-booking-id">Booking ID: GOEV-000000</span>
+          <h4 id="conf-station-name" class="detail-station-name">Confirmed Station</h4>
+          <p id="conf-port-slot" class="muted-text" style="margin-bottom:6px;"></p>
+          <p id="conf-vehicle-info" class="muted-text" style="margin-bottom:8px;"></p>
+          <p id="conf-payment-summary" class="highlight-green" style="font-size:12px;font-weight:600;"></p>
+        </article>
       </div>
     </section>
 
