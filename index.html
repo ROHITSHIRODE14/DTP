@@ -8,7 +8,7 @@
   <!-- Google Fonts: Poppins & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
 
   <!-- Leaflet.js CSS for Interactive Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -21,15 +21,15 @@
 </head>
 <body>
 
-  <!-- Mobile App Viewport Container -->
+  <!-- Mobile App Viewport Container (393 x 852 Target) -->
   <div class="app-shell">
 
-    <!-- Top Prototype Disclaimer Banner -->
+    <!-- Top Status / Prototype Bar -->
     <div class="demo-banner">
-      <span>⚡ GoEV Prototype • Live GPS + Dynamic LocalStorage • Team EVenture</span>
+      <span>⚡ GoEV • Find. Charge. Go. • Team EVenture</span>
     </div>
 
-    <!-- SCREEN 1: SPLASH SCREEN -->
+    <!-- 1. SPLASH SCREEN -->
     <section id="screen-splash" class="screen active splash-screen">
       <div class="splash-content">
         <div class="logo-badge pulse-anim">
@@ -38,7 +38,7 @@
         <h1 class="brand-title">Go<span>EV</span></h1>
         <p class="tagline">Find. Charge. Go.</p>
         <p class="splash-sub">
-          Smart EV Charging Station Finder, Time &amp; Cost Estimator, and Instant Slot Booking.
+          Smart EV Charging Station Finder, Live Charge &amp; Cost Estimator, and Instant Slot Booking.
         </p>
 
         <button type="button" id="btn-get-started" class="btn-primary">
@@ -47,12 +47,12 @@
         </button>
 
         <div class="team-credit">
-          <small>Built by <strong>Team EVenture</strong> • 1st Year Engineering Project</small>
+          <small>Team <strong>EVenture</strong> • First-Year, First-Semester Project</small>
         </div>
       </div>
     </section>
 
-    <!-- SCREEN 2: LOGIN / SIGN UP -->
+    <!-- 2. LOGIN / REGISTRATION SCREEN -->
     <section id="screen-auth" class="screen auth-screen">
       <div class="auth-header">
         <div class="auth-logo-row">
@@ -64,24 +64,24 @@
             <p class="auth-tagline">Find. Charge. Go.</p>
           </div>
         </div>
-        <p class="auth-subtitle">Sign in or create an account to find chargers and book slots.</p>
+        <p class="auth-subtitle">Sign in or register to locate nearby chargers, estimate session cost, and reserve ports.</p>
       </div>
 
       <div class="auth-card">
         <div class="auth-tabs">
           <button type="button" id="tab-login" class="auth-tab active">Login</button>
-          <button type="button" id="tab-signup" class="auth-tab">Sign Up</button>
+          <button type="button" id="tab-signup" class="auth-tab">Register</button>
         </div>
 
         <form id="auth-form" class="auth-form">
           <div id="field-name-group" class="form-group hidden">
             <label for="auth-name">Full Name</label>
-            <input type="text" id="auth-name" placeholder="Enter your name" />
+            <input type="text" id="auth-name" placeholder="Enter your full name" />
           </div>
 
           <div class="form-group">
             <label for="auth-email">Email Address</label>
-            <input type="email" id="auth-email" placeholder="driver@example.com" required />
+            <input type="email" id="auth-email" placeholder="driver@goev.app" required />
           </div>
 
           <div class="form-group">
@@ -106,21 +106,27 @@
         <div class="auth-note">
           <i data-lucide="info"></i>
           <small>
-            <strong>Storage Notice:</strong> Account, EV profile, station state, and bookings persist locally in browser LocalStorage.
+            <strong>Local Persistence:</strong> Driver profile, EV specs, live GPS distance state, and slot bookings are saved locally in your browser.
           </small>
         </div>
       </div>
     </section>
 
-    <!-- SCREEN 3 & SCREEN 10: HOME DASHBOARD + RULE-BASED RECOMMENDATION -->
+    <!-- 3 & 9. HOME DASHBOARD + RULE-BASED RECOMMENDED CHARGER + MAP PREVIEW -->
     <section id="screen-home" class="screen home-screen">
       <div class="home-top-banner">
         <div class="home-top-row">
-          <div>
-            <p class="home-welcome-label">Welcome to GoEV</p>
-            <h2 id="home-user-name" class="home-user-title">EV Driver</h2>
+          <div class="home-brand-left">
+            <div class="home-logo-chip">
+              <i data-lucide="zap"></i>
+              <span>GoEV</span>
+            </div>
+            <div>
+              <p class="home-welcome-label">Welcome back,</p>
+              <h2 id="home-user-name" class="home-user-title">EV Driver</h2>
+            </div>
           </div>
-          <span class="badge-sample">Live GPS</span>
+          <span class="badge-live">LIVE GPS</span>
         </div>
 
         <div class="gps-row">
@@ -136,63 +142,82 @@
           <input
             type="text"
             id="home-search-input"
-            placeholder="Find charging stations near you"
+            placeholder="Search station, connector, or area"
           />
-          <button type="button" id="btn-home-search-clear" class="clear-search-btn" title="Clear">
+          <button type="button" id="btn-home-search-clear" class="clear-search-btn" title="Clear search">
             <i data-lucide="x"></i>
           </button>
         </div>
       </div>
 
       <div class="home-body">
-        <!-- 4 Unique Quick Actions on Home (Calculator Popup is right here) -->
+        <!-- 4 Unique Quick Actions (Calculator Modal triggered here) -->
         <div class="quick-actions-grid">
           <button type="button" id="btn-quick-map" class="quick-action-btn">
             <div class="qa-icon teal-bg"><i data-lucide="map"></i></div>
             <span>Map</span>
           </button>
           <button type="button" id="btn-home-calculator" class="quick-action-btn">
-            <div class="qa-icon amber-bg"><i data-lucide="calculator"></i></div>
+            <div class="qa-icon green-bg"><i data-lucide="calculator"></i></div>
             <span>Calculator</span>
           </button>
           <button type="button" id="btn-quick-vehicle" class="quick-action-btn">
             <div class="qa-icon navy-bg"><i data-lucide="car"></i></div>
-            <span>My EV</span>
+            <span>My Vehicle</span>
           </button>
           <button type="button" id="btn-quick-bookings" class="quick-action-btn">
-            <div class="qa-icon green-bg"><i data-lucide="calendar-check"></i></div>
+            <div class="qa-icon amber-bg"><i data-lucide="calendar-check"></i></div>
             <span>Bookings</span>
           </button>
         </div>
 
+        <!-- Nearby Charging Station Map Preview -->
         <div class="section-block">
           <div class="section-heading-row">
-            <h3>Recommended Station</h3>
-            <span id="rec-mode-badge" class="rule-tag">Rule-Based Logic (Not AI)</span>
+            <h3>Nearby Map Preview</h3>
+            <button type="button" id="btn-home-open-full-map" class="link-action-btn">Full Map</button>
+          </div>
+          <div class="home-map-preview-card">
+            <div id="goev-home-preview-map" class="home-preview-map"></div>
+            <div class="preview-map-footer">
+              <span id="home-preview-summary" class="muted-count">Tap pins or open full map</span>
+              <button type="button" id="btn-home-open-filters" class="btn-chip-outline">
+                <i data-lucide="sliders-horizontal"></i>
+                <span>Filters</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommended Charger (Rule-Based Logic) -->
+        <div class="section-block">
+          <div class="section-heading-row">
+            <h3>Recommended Charger</h3>
+            <span class="rule-tag">Rule-Based Pick</span>
           </div>
           <div id="home-recommended-card" class="recommended-card"></div>
         </div>
 
+        <!-- Nearby Charging Station Cards -->
         <div class="section-block">
           <div class="section-heading-row">
             <h3>Nearby Charging Stations</h3>
-            <small id="home-station-count" class="muted-count">8 stations</small>
+            <small id="home-station-count" class="muted-count">0 stations</small>
           </div>
           <div id="home-stations-list" class="station-cards-list"></div>
         </div>
       </div>
     </section>
 
-    <!-- SCREEN 4: INTERACTIVE MAP (EXPLORE) -->
+    <!-- 4. NEARBY CHARGING STATIONS MAP (EXPLORE) -->
     <section id="screen-explore" class="screen explore-screen">
       <div class="subscreen-header">
         <div>
-          <h2>Explore Stations</h2>
+          <h2>Nearby Stations Map</h2>
           <p id="explore-gps-subtitle" class="subscreen-subtitle">Acquiring live GPS...</p>
         </div>
         <div class="header-actions-inline">
           <button type="button" id="btn-refresh-gps-explore" class="btn-gps-refresh">GPS</button>
-          <button type="button" id="btn-open-filters" class="btn-sm-teal">Filters</button>
         </div>
       </div>
 
@@ -206,40 +231,46 @@
       <div class="map-container-wrap">
         <div id="goev-map" class="goev-map"></div>
         <div id="map-fallback-box" class="map-fallback-box hidden">
-          <div class="fallback-title">Offline / Fallback Sample Map Grid</div>
-          <p class="fallback-desc">Map tiles require internet access. Use the interactive station pins or list below.</p>
+          <div class="fallback-title">Offline / Fallback Station Grid</div>
+          <p class="fallback-desc">Map tiles require network access. Select a station pin below to inspect.</p>
           <div id="fallback-pins" class="fallback-pins"></div>
         </div>
+
+        <!-- Floating Filter Button on Map -->
+        <button type="button" id="btn-open-filters" class="floating-filter-btn" aria-label="Filter Stations">
+          <i data-lucide="sliders-horizontal"></i>
+          <span>Filters</span>
+        </button>
       </div>
 
       <div class="explore-list-section">
         <div class="section-heading-row">
-          <h3>Nearby Stations by Distance</h3>
-          <small id="explore-station-count" class="muted-count">8 stations</small>
+          <h3>Stations Near You</h3>
+          <small id="explore-station-count" class="muted-count">0 stations</small>
         </div>
         <div id="explore-stations-list" class="station-cards-list"></div>
       </div>
     </section>
 
-    <!-- SCREEN 5: STATION DETAILS -->
-    <section id="screen-station-details" class="screen" aria-label="Station Details">
-      <header class="detail-header">
-        <button type="button" id="btn-back-from-details" class="btn-icon-back" aria-label="Back to previous screen">
+    <!-- 5. STATION DETAILS SCREEN -->
+    <section id="screen-station-details" class="screen dark-surface-screen" aria-label="Station Details">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-details" class="btn-back" aria-label="Back">
           <i data-lucide="arrow-left"></i>
           <span>Back</span>
         </button>
         <h2 class="screen-title">Station Details</h2>
-        <span class="badge-sample-tag">Live Dist.</span>
+        <span class="badge-live">LIVE</span>
       </header>
 
-      <div class="detail-content">
-        <article class="detail-hero-card">
+      <div class="screen-body">
+        <article class="surface-card">
           <div class="detail-top-row">
             <div>
-              <h3 id="detail-station-name" class="detail-station-name">Station Name</h3>
-              <p id="detail-station-address" class="detail-station-address">Sample Address</p>
+              <h3 id="detail-station-name" class="card-title-lg">Station Name</h3>
+              <p id="detail-station-address" class="card-subtitle">Address</p>
             </div>
-            <span id="detail-station-status-badge" class="status-pill">Status</span>
+            <span id="detail-station-status-badge" class="status-pill">Available</span>
           </div>
 
           <div class="detail-meta-grid">
@@ -252,231 +283,75 @@
               <strong id="detail-station-type" class="meta-value">--</strong>
             </div>
             <div class="meta-box">
-              <span class="meta-label">Max Power</span>
+              <span class="meta-label">Charging Speed</span>
               <strong id="detail-station-power" class="meta-value">-- kW</strong>
             </div>
             <div class="meta-box">
-              <span class="meta-label">Tariff</span>
+              <span class="meta-label">Tariff Rate</span>
               <strong id="detail-station-price" class="meta-value">₹-- / kWh</strong>
             </div>
           </div>
 
-          <p id="detail-station-connectors" class="detail-connectors-text">
-            Connectors: --
-          </p>
+          <p id="detail-station-connectors" class="card-subtitle">Connectors: --</p>
         </article>
 
-        <article class="detail-estimate-card">
+        <article class="surface-card">
           <div class="card-header-row">
-            <h4 class="section-heading">Estimated Charge (Your EV)</h4>
-            <span id="detail-vehicle-label" class="muted-text">Tata Nexon EV</span>
+            <h4 class="section-heading-light">Session Estimate (Your Vehicle)</h4>
+            <span id="detail-vehicle-label" class="card-subtitle">Tata Nexon EV</span>
           </div>
 
           <div class="estimate-summary-row">
             <div>
-              <span class="muted-text">Energy Needed</span>
+              <span class="card-subtitle">Energy Needed</span>
               <strong id="detail-est-energy" class="estimate-val">-- kWh</strong>
             </div>
             <div>
-              <span class="muted-text">Est. Time</span>
+              <span class="card-subtitle">Est. Time</span>
               <strong id="detail-est-time" class="estimate-val">-- hrs</strong>
             </div>
             <div>
-              <span class="muted-text">Est. Cost</span>
+              <span class="card-subtitle">Est. Cost</span>
               <strong id="detail-est-cost" class="estimate-val highlight-green">₹--</strong>
             </div>
           </div>
           <p class="disclaimer-note">
-            * Estimates use your saved EV profile and station tariff rates. Actual charging time varies due to battery charging curves.
+            * Calculated from your saved EV battery/SoC target and station kW &amp; ₹/kWh rate.
           </p>
         </article>
 
-        <article class="detail-ports-card">
+        <article class="surface-card">
           <div class="card-header-row">
-            <h4 class="section-heading">Charging Ports</h4>
-            <span id="detail-ports-count" class="muted-text">0 ports</span>
+            <h4 class="section-heading-light">Charging Ports</h4>
+            <span id="detail-ports-count" class="card-subtitle">0 available</span>
           </div>
           <div id="detail-ports-list" class="ports-list"></div>
         </article>
       </div>
 
       <div class="detail-action-bar">
-        <button type="button" id="btn-detail-book-now" class="btn-primary-action">
+        <button type="button" id="btn-detail-book-now" class="btn-primary">
           <i data-lucide="zap"></i>
           <span>Book Charging Slot</span>
         </button>
       </div>
     </section>
 
-    <!-- SCREENS 11, 12 & 13: SLOT BOOKING, 20% ADVANCE SIMULATION & CONFIRMATION -->
-    <section id="screen-booking" class="screen" aria-label="Slot Booking and Simulated Advance Payment">
-      <header class="screen-header">
-        <button type="button" id="btn-back-from-booking" class="btn-back" aria-label="Back">
-          <i data-lucide="arrow-left"></i>
-          <span>Back</span>
-        </button>
-        <h2 class="screen-title">Book Charging Slot</h2>
-        <span class="sample-badge">20% Adv.</span>
-      </header>
-
-      <div class="screen-body">
-        <article class="booking-card">
-          <h3 id="booking-station-name" class="detail-station-name">Station Name</h3>
-          <p id="booking-station-meta" class="muted-text" style="margin-bottom:8px;">Sample Area</p>
-          <p id="booking-vehicle-summary" class="muted-text">EV: Tata Nexon EV</p>
-
-          <div class="form-group" style="margin-top:14px;">
-            <label for="booking-port-select">Select Charging Port</label>
-            <select id="booking-port-select"></select>
-            <small id="booking-port-status-note" class="muted-text"></small>
-          </div>
-
-          <div class="form-group">
-            <label for="booking-date-input">Select Date</label>
-            <input type="date" id="booking-date-input" />
-          </div>
-
-          <div class="form-group">
-            <label>Select Time Slot</label>
-            <div id="booking-slots-list" class="slots-grid"></div>
-          </div>
-        </article>
-
-        <article class="payment-breakdown-card">
-          <h4 class="section-heading" style="margin-bottom:10px;">Estimate &amp; 20% Advance Simulation</h4>
-
-          <div class="payment-row">
-            <span class="muted-text">Estimated Energy</span>
-            <strong id="booking-est-energy-val">-- kWh</strong>
-          </div>
-          <div class="payment-row">
-            <span class="muted-text">Estimated Time</span>
-            <strong id="booking-est-time-val">-- hrs</strong>
-          </div>
-          <div class="payment-row">
-            <span class="muted-text">Estimated Full Charge Cost</span>
-            <strong id="booking-est-cost-val">₹--</strong>
-          </div>
-          <div class="payment-row payment-row--highlight">
-            <span>Simulated Advance Due (20%)</span>
-            <strong id="booking-advance-val">₹--</strong>
-          </div>
-          <div class="payment-row">
-            <span class="muted-text">Remaining Balance at Station (80%)</span>
-            <strong id="booking-remaining-val">₹--</strong>
-          </div>
-
-          <p id="booking-error-msg" class="form-error-msg" aria-live="polite"></p>
-
-          <button type="button" id="btn-simulate-payment" class="btn-primary-action">
-            <i data-lucide="shield-check"></i>
-            <span>Simulate 20% Advance Payment</span>
-          </button>
-
-          <p class="disclaimer-text">
-            Simulation Notice: No real payment or gateway transaction occurs. Confirming marks the selected port Reserved in LocalStorage and records the booking.
-          </p>
-        </article>
-
-        <!-- SCREEN 13: BOOKING CONFIRMATION CARD -->
-        <article id="booking-confirmation-card" class="confirmation-card hidden" aria-live="polite">
-          <span class="booking-id-badge" id="conf-booking-id">Booking ID: GOEV-000000</span>
-          <h4 id="conf-station-name" class="detail-station-name">Confirmed Station</h4>
-          <p id="conf-port-slot" class="muted-text" style="margin-bottom:6px;"></p>
-          <p id="conf-vehicle-info" class="muted-text" style="margin-bottom:8px;"></p>
-          <p id="conf-payment-summary" class="highlight-green" style="font-size:12px;font-weight:600;margin-bottom:12px;"></p>
-          <button type="button" id="btn-conf-view-bookings" class="btn-secondary" style="width:100%;">
-            <span>View in My Bookings</span>
-          </button>
-        </article>
-      </div>
-    </section>
-
-    <!-- SCREEN 14: BOOKINGS HISTORY & LIVE TELEMETRY -->
-    <section id="screen-bookings" class="screen" aria-label="My Bookings History">
-      <header class="screen-header">
-        <button type="button" id="btn-back-from-bookings" class="btn-back" aria-label="Back">
-          <i data-lucide="arrow-left"></i>
-          <span>Back</span>
-        </button>
-        <h2 class="screen-title">My Bookings</h2>
-        <span id="bookings-count-label" class="sample-badge">0 bookings</span>
-      </header>
-
-      <div class="screen-body">
-        <div id="bookings-history-list" class="station-cards-list"></div>
-      </div>
-    </section>
-
-    <!-- SCREEN 15: DRIVER PROFILE & DATA CONTROLS -->
-    <section id="screen-profile" class="screen" aria-label="Driver Profile and Settings">
-      <header class="screen-header">
-        <button type="button" id="btn-back-from-profile" class="btn-back" aria-label="Back">
-          <i data-lucide="arrow-left"></i>
-          <span>Back</span>
-        </button>
-        <h2 class="screen-title">Driver Profile</h2>
-        <span class="sample-badge">Account</span>
-      </header>
-
-      <div class="screen-body">
-        <article class="profile-card">
-          <h3 id="profile-driver-name" class="detail-station-name">EV Driver</h3>
-          <p id="profile-driver-email" class="muted-text" style="margin-bottom:12px;">demo@goev.app</p>
-
-          <div class="detail-meta-grid" style="margin-bottom:0;">
-            <div class="meta-box">
-              <span class="meta-label">Saved EV</span>
-              <strong id="profile-vehicle-summary" class="meta-value">Tata Nexon EV</strong>
-            </div>
-            <div class="meta-box">
-              <span class="meta-label">Charge Target</span>
-              <strong id="profile-soc-summary" class="meta-value">30% → 80%</strong>
-            </div>
-            <div class="meta-box">
-              <span class="meta-label">Bookings</span>
-              <strong id="profile-bookings-count" class="meta-value">0 recorded</strong>
-            </div>
-            <div class="meta-box">
-              <span class="meta-label">Persistence</span>
-              <strong class="meta-value highlight-green">LocalStorage</strong>
-            </div>
-          </div>
-        </article>
-
-        <article class="profile-card">
-          <h4 class="section-heading">Session &amp; Station Data Controls</h4>
-          <p id="profile-action-msg" class="form-status-msg"></p>
-
-          <div class="profile-stack">
-            <button type="button" id="btn-reset-sample-stations" class="btn-secondary">
-              <i data-lucide="rotate-ccw"></i>
-              <span>Reset Stations &amp; Filters</span>
-            </button>
-
-            <button type="button" id="btn-logout-driver" class="btn-danger-ghost" style="padding:12px;">
-              <span>Logout Session</span>
-            </button>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- SCREEN 6: EV VEHICLE PROFILE -->
-    <section id="screen-vehicle" class="screen" aria-label="EV Vehicle Profile">
+    <!-- 6. VEHICLE PROFILE SCREEN -->
+    <section id="screen-vehicle" class="screen dark-surface-screen" aria-label="Vehicle Profile">
       <header class="screen-header">
         <button type="button" id="btn-back-from-vehicle" class="btn-back" aria-label="Back">
           <i data-lucide="arrow-left"></i>
           <span>Back</span>
         </button>
-        <h2 class="screen-title">My EV Profile</h2>
-        <span class="sample-badge">LocalStorage</span>
+        <h2 class="screen-title">My Vehicle</h2>
+        <span class="badge-live">EV SPEC</span>
       </header>
 
       <div class="screen-body">
-        <form id="vehicle-form" class="vehicle-form" novalidate>
+        <form id="vehicle-form" class="surface-card" novalidate>
           <div class="form-group">
-            <label for="vehicle-name">Vehicle Name</label>
+            <label for="vehicle-name">Vehicle Model</label>
             <input
               type="text"
               id="vehicle-name"
@@ -545,25 +420,25 @@
 
           <button type="submit" id="btn-save-vehicle" class="btn-primary">
             <i data-lucide="save"></i>
-            <span>Save EV Profile</span>
+            <span>Save Vehicle Profile</span>
           </button>
         </form>
       </div>
     </section>
 
-    <!-- SCREEN 7: FILTERS & RESET -->
-    <section id="screen-filters" class="screen" aria-label="Filter Stations">
+    <!-- 7. SEARCH AND FILTERS SCREEN -->
+    <section id="screen-filters" class="screen dark-surface-screen" aria-label="Search and Filters">
       <header class="screen-header">
         <button type="button" id="btn-back-from-filters" class="btn-back" aria-label="Back">
           <i data-lucide="arrow-left"></i>
           <span>Back</span>
         </button>
-        <h2 class="screen-title">Filter Stations</h2>
-        <span class="sample-badge">Live Filter</span>
+        <h2 class="screen-title">Search &amp; Filters</h2>
+        <span class="badge-live">FILTER</span>
       </header>
 
       <div class="screen-body">
-        <form id="filters-form" class="filters-form">
+        <form id="filters-form" class="surface-card">
           <div class="form-group">
             <label for="filter-distance">Max Distance (km)</label>
             <input
@@ -593,9 +468,9 @@
             <label for="filter-speed">Charging Speed</label>
             <select id="filter-speed" name="speed">
               <option value="">All Speeds</option>
-              <option value="Slow">Slow (AC / Low kW)</option>
-              <option value="Fast">Fast (DC / Medium-High kW)</option>
-              <option value="Rapid">Rapid (High-Power DC)</option>
+              <option value="Slow">Slow (&lt; 22 kW)</option>
+              <option value="Fast">Fast (22–59 kW)</option>
+              <option value="Rapid">Rapid (60+ kW)</option>
             </select>
           </div>
 
@@ -618,27 +493,181 @@
           </div>
 
           <div class="filter-actions-row">
-            <button type="button" id="btn-reset-filters" class="btn-secondary">
+            <button type="button" id="btn-reset-filters" class="btn-secondary-dark">
               <i data-lucide="rotate-ccw"></i>
               <span>Reset</span>
             </button>
 
             <button type="button" id="btn-apply-filters" class="btn-primary">
-              <i data-lucide="sliders-horizontal"></i>
-              <span>Apply</span>
+              <i data-lucide="check"></i>
+              <span>Apply Filters</span>
             </button>
           </div>
         </form>
       </div>
     </section>
 
-    <!-- REAL-TIME CHARGE CALCULATOR POPUP MODAL (TRIGGERED FROM HOME) -->
-    <div id="calculator-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Real-Time Charge Calculator">
+    <!-- 10, 11 & 12. SLOT BOOKING, 20% ADVANCE PAYMENT & CONFIRMATION -->
+    <section id="screen-booking" class="screen dark-surface-screen" aria-label="Slot Booking and Payment">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-booking" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">Slot Checkout</h2>
+        <span class="badge-live">20% ADV</span>
+      </header>
+
+      <div class="screen-body">
+        <article class="surface-card">
+          <h3 id="booking-station-name" class="card-title-lg">Station Name</h3>
+          <p id="booking-station-meta" class="card-subtitle" style="margin-bottom:4px;">Location &amp; Tariff</p>
+          <p id="booking-vehicle-summary" class="card-subtitle">Vehicle summary</p>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label for="booking-port-select">Select Connector &amp; Port</label>
+            <select id="booking-port-select"></select>
+            <small id="booking-port-status-note" class="card-subtitle"></small>
+          </div>
+
+          <div class="form-group">
+            <label for="booking-date-input">Booking Date</label>
+            <input type="date" id="booking-date-input" />
+          </div>
+
+          <div class="form-group">
+            <label>Booking Time Slot</label>
+            <div id="booking-slots-list" class="slots-grid"></div>
+          </div>
+        </article>
+
+        <article class="surface-card">
+          <h4 class="section-heading-light" style="margin-bottom:10px;">Fare &amp; 20% Advance Breakdown</h4>
+
+          <div class="payment-row">
+            <span class="card-subtitle">Estimated Energy</span>
+            <strong id="booking-est-energy-val">-- kWh</strong>
+          </div>
+          <div class="payment-row">
+            <span class="card-subtitle">Estimated Charging Time</span>
+            <strong id="booking-est-time-val">-- hrs</strong>
+          </div>
+          <div class="payment-row">
+            <span class="card-subtitle">Estimated Charging Amount</span>
+            <strong id="booking-est-cost-val">₹--</strong>
+          </div>
+          <div class="payment-row payment-row--highlight">
+            <span>20% Advance Payment</span>
+            <strong id="booking-advance-val">₹--</strong>
+          </div>
+          <div class="payment-row">
+            <span class="card-subtitle">Remaining Amount at Station (80%)</span>
+            <strong id="booking-remaining-val">₹--</strong>
+          </div>
+
+          <p id="booking-error-msg" class="form-error-msg" aria-live="polite"></p>
+
+          <button type="button" id="btn-simulate-payment" class="btn-primary">
+            <i data-lucide="shield-check"></i>
+            <span>Simulate 20% Advance Payment</span>
+          </button>
+
+          <p class="disclaimer-note">
+            Simulated prototype checkout: No real payment is charged. Confirming reserves the port and generates a booking ID.
+          </p>
+        </article>
+
+        <!-- BOOKING CONFIRMATION CARD -->
+        <article id="booking-confirmation-card" class="confirmation-card hidden" aria-live="polite">
+          <span class="booking-id-badge" id="conf-booking-id">Booking ID: GOEV-000000</span>
+          <h4 id="conf-station-name" class="card-title-lg">Booking Confirmed</h4>
+          <p id="conf-port-slot" class="card-subtitle" style="margin-bottom:6px;"></p>
+          <p id="conf-vehicle-info" class="card-subtitle" style="margin-bottom:8px;"></p>
+          <p id="conf-payment-summary" class="highlight-green" style="font-size:12px;font-weight:600;margin-bottom:12px;"></p>
+          <button type="button" id="btn-conf-view-bookings" class="btn-secondary-dark" style="width:100%;">
+            <span>View in Booking History</span>
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <!-- 13. BOOKING HISTORY SCREEN -->
+    <section id="screen-bookings" class="screen dark-surface-screen" aria-label="Booking History">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-bookings" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">Booking History</h2>
+        <span id="bookings-count-label" class="badge-live">0</span>
+      </header>
+
+      <div class="screen-body">
+        <div id="bookings-history-list" class="station-cards-list"></div>
+      </div>
+    </section>
+
+    <!-- 14. USER PROFILE SCREEN -->
+    <section id="screen-profile" class="screen dark-surface-screen" aria-label="User Profile">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-profile" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">User Profile</h2>
+        <span class="badge-live">DRIVER</span>
+      </header>
+
+      <div class="screen-body">
+        <article class="surface-card">
+          <h3 id="profile-driver-name" class="card-title-lg">EV Driver</h3>
+          <p id="profile-driver-email" class="card-subtitle" style="margin-bottom:12px;">demo@goev.app</p>
+
+          <div class="detail-meta-grid" style="margin-bottom:0;">
+            <div class="meta-box">
+              <span class="meta-label">Vehicle</span>
+              <strong id="profile-vehicle-summary" class="meta-value">Tata Nexon EV</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">SoC Target</span>
+              <strong id="profile-soc-summary" class="meta-value">30% → 80%</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Total Bookings</span>
+              <strong id="profile-bookings-count" class="meta-value">0</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Team</span>
+              <strong class="meta-value highlight-green">EVenture</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="surface-card">
+          <h4 class="section-heading-light">Data &amp; Session Controls</h4>
+          <p id="profile-action-msg" class="form-status-msg"></p>
+
+          <div class="profile-stack">
+            <button type="button" id="btn-reset-sample-stations" class="btn-secondary-dark">
+              <i data-lucide="rotate-ccw"></i>
+              <span>Reset Stations &amp; Filters</span>
+            </button>
+
+            <button type="button" id="btn-logout-driver" class="btn-danger-ghost" style="padding:12px;">
+              <span>Logout Session</span>
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 8. CHARGING TIME & COST CALCULATOR POPUP MODAL (TRIGGERED FROM HOME) -->
+    <div id="calculator-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Charging Time and Cost Calculator">
       <div class="modal-sheet">
         <div class="modal-header">
           <div>
-            <h3 class="screen-title">Live Charge Calculator</h3>
-            <p class="subscreen-subtitle">Instant time, kWh &amp; tariff calculator</p>
+            <h3 class="screen-title">Charge &amp; Cost Calculator</h3>
+            <p class="subscreen-subtitle">Real-time kWh, charging duration &amp; tariff estimate</p>
           </div>
           <button type="button" id="btn-close-calculator-modal" class="modal-close-btn" aria-label="Close Calculator">
             <i data-lucide="x"></i>
@@ -652,7 +681,7 @@
 
         <form id="calculator-form" novalidate>
           <div class="form-group">
-            <label for="calc-station-select">Station Power &amp; Tariff Preset</label>
+            <label for="calc-station-select">Station Charger &amp; Tariff</label>
             <select id="calc-station-select"></select>
           </div>
 
@@ -712,7 +741,7 @@
             </div>
 
             <div class="form-group">
-              <label for="calc-price">Price per kWh (₹)</label>
+              <label for="calc-price">Tariff per kWh (₹)</label>
               <input
                 type="number"
                 id="calc-price"
@@ -728,44 +757,39 @@
           <p id="calc-error-msg" class="form-error-msg" aria-live="polite"></p>
         </form>
 
-        <div class="calculator-results-card">
-          <div class="calc-results-grid">
-            <div class="calc-result-box">
-              <span class="meta-label">Energy Needed</span>
+        <!-- Electric Green Highlighted Result Card -->
+        <div class="calculator-green-result">
+          <div class="calc-green-top">
+            <span>ESTIMATED SESSION OUTPUT</span>
+            <strong id="calc-cost-out">₹--</strong>
+          </div>
+          <div class="calc-green-metrics">
+            <div>
+              <small>Energy Required</small>
               <strong id="calc-energy-out">-- kWh</strong>
             </div>
-
-            <div class="calc-result-box">
-              <span class="meta-label">Est. Time</span>
+            <div>
+              <small>Estimated Time</small>
               <strong id="calc-time-out">-- hrs</strong>
             </div>
-
-            <div class="calc-result-box">
-              <span class="meta-label">Est. Cost</span>
-              <strong id="calc-cost-out" class="highlight-green">₹--</strong>
-            </div>
           </div>
-
-          <p class="disclaimer-text">
-            Note: Uses linear energy/tariff math; real-world DC charging tapers above 80% SoC due to battery management curves.
-          </p>
         </div>
       </div>
     </div>
 
-    <!-- BOTTOM NAVIGATION BAR -->
-    <nav id="bottom-nav" class="bottom-nav hidden">
+    <!-- DARK NAVY BOTTOM NAVIGATION BAR (5 TABS) -->
+    <nav id="bottom-nav" class="bottom-nav hidden" aria-label="Primary Navigation">
       <button type="button" class="nav-item active" data-target="screen-home">
         <i data-lucide="home"></i>
         <span>Home</span>
       </button>
       <button type="button" class="nav-item" data-target="screen-explore">
-        <i data-lucide="map-pin"></i>
+        <i data-lucide="compass"></i>
         <span>Explore</span>
       </button>
       <button type="button" class="nav-item" data-target="screen-vehicle">
         <i data-lucide="car"></i>
-        <span>My EV</span>
+        <span>My Vehicle</span>
       </button>
       <button type="button" class="nav-item" data-target="screen-bookings">
         <i data-lucide="calendar-check"></i>
