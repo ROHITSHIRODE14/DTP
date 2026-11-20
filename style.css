@@ -961,7 +961,9 @@ body {
 .calculator-results-card,
 .booking-card,
 .payment-breakdown-card,
-.confirmation-card {
+.confirmation-card,
+.booking-history-card,
+.profile-card {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
@@ -1124,12 +1126,14 @@ body {
 }
 
 /* =========================================
-   SCREENS 6, 7, 8, 9, 11, 12 & 13
+   SCREENS 6–9 & 11–15
    ========================================= */
 #screen-vehicle,
 #screen-filters,
 #screen-calculator,
-#screen-booking {
+#screen-booking,
+#screen-bookings,
+#screen-profile {
   background: var(--dark-navy);
   color: #F4F8FB;
 }
@@ -1252,4 +1256,37 @@ body {
   color: var(--electric-green);
   border: 1px solid rgba(22, 199, 132, 0.4);
   margin-bottom: 8px;
+}
+
+.booking-kv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.booking-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-danger-ghost {
+  background: rgba(239, 83, 80, 0.14);
+  color: #FCA5A5;
+  border: 1px solid rgba(239, 83, 80, 0.35);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
