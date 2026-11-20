@@ -41,7 +41,7 @@
           Smart EV Charging Station Finder, Time &amp; Cost Estimator, and Instant Slot Booking.
         </p>
 
-        <button id="btn-get-started" class="btn-primary">
+        <button type="button" id="btn-get-started" class="btn-primary">
           <span>Get Started</span>
           <i data-lucide="arrow-right"></i>
         </button>
@@ -68,7 +68,6 @@
       </div>
 
       <div class="auth-card">
-        <!-- Mode Switcher: Login vs Sign Up -->
         <div class="auth-tabs">
           <button type="button" id="tab-login" class="auth-tab active">Login</button>
           <button type="button" id="tab-signup" class="auth-tab">Sign Up</button>
@@ -113,8 +112,7 @@
       </div>
     </section>
 
-    <!-- PLACEHOLDER FOR HOME DASHBOARD (NEXT STEP) -->
-    <!-- SCREEN 3: HOME DASHBOARD -->
+    <!-- SCREEN 3 & SCREEN 10: HOME DASHBOARD + RULE-BASED RECOMMENDATION -->
     <section id="screen-home" class="screen home-screen">
       <div class="home-top-banner">
         <div class="home-top-row">
@@ -160,11 +158,11 @@
           </button>
         </div>
 
-        <!-- Recommended Station Card (Basic Rule-Based) -->
+        <!-- SCREEN 10: Recommended Station Card (Rule-Based, Not AI) -->
         <div class="section-block">
           <div class="section-heading-row">
             <h3>Recommended Station</h3>
-            <span class="rule-tag">Rule-Based Pick</span>
+            <span class="rule-tag">Rule-Based Logic (Not AI)</span>
           </div>
           <div id="home-recommended-card" class="recommended-card"></div>
         </div>
@@ -187,7 +185,7 @@
           <h2>Explore Stations</h2>
           <p class="subscreen-subtitle">Fictional sample markers • Not live GPS</p>
         </div>
-        <span class="badge-sample">Map View</span>
+        <button type="button" id="btn-open-filters" class="btn-sm-teal">Filters</button>
       </div>
 
       <div class="map-legend">
@@ -214,425 +212,400 @@
         <div id="explore-stations-list" class="station-cards-list"></div>
       </div>
     </section>
+
     <!-- SCREEN 5: STATION DETAILS -->
-<section id="screen-station-details" class="screen" aria-label="Station Details">
-  <header class="detail-header">
-    <button type="button" id="btn-back-from-details" class="btn-icon-back" aria-label="Back to previous screen">
-      <i data-lucide="arrow-left"></i>
-      <span>Back</span>
-    </button>
-    <h2 class="screen-title">Station Details</h2>
-    <span class="badge-sample-tag">Sample Data</span>
-  </header>
+    <section id="screen-station-details" class="screen" aria-label="Station Details">
+      <header class="detail-header">
+        <button type="button" id="btn-back-from-details" class="btn-icon-back" aria-label="Back to previous screen">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">Station Details</h2>
+        <span class="badge-sample-tag">Sample Data</span>
+      </header>
 
-  <div class="detail-content">
-    <!-- Station Summary Card -->
-    <article class="card detail-hero-card">
-      <div class="detail-top-row">
-        <div>
-          <h3 id="detail-station-name" class="detail-station-name">Station Name</h3>
-          <p id="detail-station-address" class="detail-station-address">Sample Address</p>
-        </div>
-        <span id="detail-station-status-badge" class="status-pill">Status</span>
+      <div class="detail-content">
+        <article class="detail-hero-card">
+          <div class="detail-top-row">
+            <div>
+              <h3 id="detail-station-name" class="detail-station-name">Station Name</h3>
+              <p id="detail-station-address" class="detail-station-address">Sample Address</p>
+            </div>
+            <span id="detail-station-status-badge" class="status-pill">Status</span>
+          </div>
+
+          <div class="detail-meta-grid">
+            <div class="meta-box">
+              <span class="meta-label">Distance (Sample)</span>
+              <strong id="detail-station-distance" class="meta-value">-- km</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Charger Type</span>
+              <strong id="detail-station-type" class="meta-value">--</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Max Power</span>
+              <strong id="detail-station-power" class="meta-value">-- kW</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Tariff (Sample)</span>
+              <strong id="detail-station-price" class="meta-value">₹-- / kWh</strong>
+            </div>
+          </div>
+
+          <p id="detail-station-connectors" class="detail-connectors-text">
+            Connectors: --
+          </p>
+        </article>
+
+        <article class="detail-estimate-card">
+          <div class="card-header-row">
+            <h4 class="section-heading">Estimated Charge (Your EV)</h4>
+            <span id="detail-vehicle-label" class="muted-text">Tata Nexon EV</span>
+          </div>
+
+          <div class="estimate-summary-row">
+            <div>
+              <span class="muted-text">Energy Needed</span>
+              <strong id="detail-est-energy" class="estimate-val">-- kWh</strong>
+            </div>
+            <div>
+              <span class="muted-text">Est. Time</span>
+              <strong id="detail-est-time" class="estimate-val">-- hrs</strong>
+            </div>
+            <div>
+              <span class="muted-text">Est. Cost (Sample Rate)</span>
+              <strong id="detail-est-cost" class="estimate-val highlight-green">₹--</strong>
+            </div>
+          </div>
+          <p class="disclaimer-note">
+            * Estimates use your saved EV profile and sample tariff rates. Actual charging time varies due to battery charging curves.
+          </p>
+        </article>
+
+        <article class="detail-ports-card">
+          <div class="card-header-row">
+            <h4 class="section-heading">Charging Ports</h4>
+            <span id="detail-ports-count" class="muted-text">0 ports</span>
+          </div>
+          <div id="detail-ports-list" class="ports-list"></div>
+        </article>
       </div>
 
-      <div class="detail-meta-grid">
-        <div class="meta-box">
-          <span class="meta-label">Distance (Sample)</span>
-          <strong id="detail-station-distance" class="meta-value">-- km</strong>
-        </div>
-        <div class="meta-box">
-          <span class="meta-label">Charger Type</span>
-          <strong id="detail-station-type" class="meta-value">--</strong>
-        </div>
-        <div class="meta-box">
-          <span class="meta-label">Max Power</span>
-          <strong id="detail-station-power" class="meta-value">-- kW</strong>
-        </div>
-        <div class="meta-box">
-          <span class="meta-label">Tariff (Sample)</span>
-          <strong id="detail-station-price" class="meta-value">₹-- / kWh</strong>
-        </div>
+      <div class="detail-action-bar">
+        <button type="button" id="btn-detail-book-now" class="btn-primary-action">
+          <i data-lucide="zap"></i>
+          <span>Book Charging Slot</span>
+        </button>
       </div>
+    </section>
 
-      <p id="detail-station-connectors" class="detail-connectors-text">
-        Connectors: --
-      </p>
-    </article>
-
-    <!-- Charging Estimate Preview (Uses goev_vehicle) -->
-    <article class="card detail-estimate-card">
-      <div class="card-header-row">
-        <h4 class="section-heading">Estimated Charge (Your EV)</h4>
-        <span id="detail-vehicle-label" class="muted-text">Tata Nexon EV</span>
-      </div>
-
-      <div class="estimate-summary-row">
-        <div>
-          <span class="muted-text">Energy Needed</span>
-          <strong id="detail-est-energy" class="estimate-val">-- kWh</strong>
-        </div>
-        <div>
-          <span class="muted-text">Est. Time</span>
-          <strong id="detail-est-time" class="estimate-val">-- hrs</strong>
-        </div>
-        <div>
-          <span class="muted-text">Est. Cost (Sample Rate)</span>
-          <strong id="detail-est-cost" class="estimate-val highlight-green">₹--</strong>
-        </div>
-      </div>
-      <p class="disclaimer-note">
-        * Estimates use your saved EV profile and sample tariff rates. Actual charging time varies due to battery charging curves.
-      </p>
-    </article>
     <!-- SCREEN 6: EV VEHICLE PROFILE -->
-<section id="screen-vehicle" class="screen" aria-label="EV Vehicle Profile">
-  <header class="screen-header">
-    <button type="button" id="btn-back-from-vehicle" class="btn-back" aria-label="Back">
-      <i data-lucide="arrow-left"></i>
-      <span>Back</span>
-    </button>
-    <h2 class="screen-title">My EV Profile</h2>
-    <span class="sample-badge">LocalStorage</span>
-  </header>
+    <section id="screen-vehicle" class="screen" aria-label="EV Vehicle Profile">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-vehicle" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">My EV Profile</h2>
+        <span class="sample-badge">LocalStorage</span>
+      </header>
 
-  <div class="screen-body">
-    <form id="vehicle-form" class="card vehicle-form" novalidate>
-      <div class="form-group">
-        <label for="vehicle-name">Vehicle Name</label>
-        <input
-          type="text"
-          id="vehicle-name"
-          name="vehicleName"
-          placeholder="e.g., Tata Nexon EV"
-          required
-        />
+      <div class="screen-body">
+        <form id="vehicle-form" class="vehicle-form" novalidate>
+          <div class="form-group">
+            <label for="vehicle-name">Vehicle Name</label>
+            <input
+              type="text"
+              id="vehicle-name"
+              name="vehicleName"
+              placeholder="e.g., Tata Nexon EV"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="vehicle-capacity">Battery Capacity (kWh)</label>
+            <input
+              type="number"
+              id="vehicle-capacity"
+              name="capacity"
+              min="1"
+              max="300"
+              step="0.1"
+              placeholder="e.g., 40"
+              required
+            />
+          </div>
+
+          <div class="form-row-two">
+            <div class="form-group">
+              <label for="vehicle-current-soc">Current Charge (%)</label>
+              <input
+                type="number"
+                id="vehicle-current-soc"
+                name="currentSoc"
+                min="0"
+                max="100"
+                step="1"
+                placeholder="e.g., 30"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="vehicle-target-soc">Target Charge (%)</label>
+              <input
+                type="number"
+                id="vehicle-target-soc"
+                name="targetSoc"
+                min="1"
+                max="100"
+                step="1"
+                placeholder="e.g., 80"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="vehicle-connector">Connector Type</label>
+            <select id="vehicle-connector" name="connector" required>
+              <option value="CCS2">CCS2</option>
+              <option value="Type 2">Type 2</option>
+              <option value="CHAdeMO">CHAdeMO</option>
+              <option value="Bharat AC-001">Bharat AC-001</option>
+              <option value="Bharat DC-001">Bharat DC-001</option>
+            </select>
+          </div>
+
+          <p id="vehicle-status-msg" class="form-status-msg" aria-live="polite"></p>
+
+          <button type="submit" id="btn-save-vehicle" class="btn-primary">
+            <i data-lucide="save"></i>
+            <span>Save EV Profile</span>
+          </button>
+        </form>
       </div>
+    </section>
 
-      <div class="form-group">
-        <label for="vehicle-capacity">Battery Capacity (kWh)</label>
-        <input
-          type="number"
-          id="vehicle-capacity"
-          name="capacity"
-          min="1"
-          max="300"
-          step="0.1"
-          placeholder="e.g., 40"
-          required
-        />
-      </div>
-
-      <div class="form-row-two">
-        <div class="form-group">
-          <label for="vehicle-current-soc">Current Charge (%)</label>
-          <input
-            type="number"
-            id="vehicle-current-soc"
-            name="currentSoc"
-            min="0"
-            max="100"
-            step="1"
-            placeholder="e.g., 30"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="vehicle-target-soc">Target Charge (%)</label>
-          <input
-            type="number"
-            id="vehicle-target-soc"
-            name="targetSoc"
-            min="1"
-            max="100"
-            step="1"
-            placeholder="e.g., 80"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="vehicle-connector">Connector Type</label>
-        <select id="vehicle-connector" name="connector" required>
-          <option value="CCS2">CCS2</option>
-          <option value="Type 2">Type 2</option>
-          <option value="CHAdeMO">CHAdeMO</option>
-          <option value="Bharat AC-001">Bharat AC-001</option>
-          <option value="Bharat DC-001">Bharat DC-001</option>
-        </select>
-      </div>
-
-      <p id="vehicle-status-msg" class="form-status-msg" aria-live="polite"></p>
-
-      <button type="submit" id="btn-save-vehicle" class="btn-primary">
-        <i data-lucide="save"></i>
-        <span>Save EV Profile</span>
-      </button>
-    </form>
-  </div>
-</section>
     <!-- SCREEN 7: FILTERS & RESET -->
-<section id="screen-filters" class="screen" aria-label="Filter Stations">
-  <header class="screen-header">
-    <button type="button" id="btn-back-from-filters" class="btn-back" aria-label="Back">
-      <i data-lucide="arrow-left"></i>
-      <span>Back</span>
-    </button>
-    <h2 class="screen-title">Filter Stations</h2>
-    <span class="sample-badge">Sample Data</span>
-  </header>
-
-  <div class="screen-body">
-    <form id="filters-form" class="card filters-form">
-      <div class="form-group">
-        <label for="filter-distance">Max Distance (km, Sample)</label>
-        <input
-          type="number"
-          id="filter-distance"
-          name="maxDistance"
-          min="1"
-          max="100"
-          step="0.5"
-          placeholder="e.g., 10"
-        />
-      </div>
-
-      <div class="form-group">
-        <label for="filter-connector">Connector Type</label>
-        <select id="filter-connector" name="connector">
-          <option value="">All Connectors</option>
-          <option value="CCS2">CCS2</option>
-          <option value="Type 2">Type 2</option>
-          <option value="CHAdeMO">CHAdeMO</option>
-          <option value="Bharat AC-001">Bharat AC-001</option>
-          <option value="Bharat DC-001">Bharat DC-001</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="filter-speed">Charging Speed</label>
-        <select id="filter-speed" name="speed">
-          <option value="">All Speeds</option>
-          <option value="Slow">Slow (AC / Low kW)</option>
-          <option value="Fast">Fast (DC / Medium-High kW)</option>
-          <option value="Rapid">Rapid (High-Power DC)</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="filter-max-price">Max Price per kWh (₹, Sample)</label>
-        <input
-          type="number"
-          id="filter-max-price"
-          name="maxPrice"
-          min="1"
-          max="100"
-          step="0.5"
-          placeholder="e.g., 20"
-        />
-      </div>
-
-      <div class="form-group checkbox-group">
-        <input type="checkbox" id="filter-available-only" name="availableOnly" />
-        <label for="filter-available-only">Show stations with available ports only</label>
-      </div>
-
-      <div class="filter-actions-row">
-        <button type="button" id="btn-reset-filters" class="btn-secondary">
-          <i data-lucide="rotate-ccw"></i>
-          <span>Reset Filters</span>
+    <section id="screen-filters" class="screen" aria-label="Filter Stations">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-filters" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
         </button>
+        <h2 class="screen-title">Filter Stations</h2>
+        <span class="sample-badge">Sample Data</span>
+      </header>
 
-        <button type="button" id="btn-apply-filters" class="btn-primary">
-          <i data-lucide="sliders-horizontal"></i>
-          <span>Apply Filters</span>
-        </button>
+      <div class="screen-body">
+        <form id="filters-form" class="filters-form">
+          <div class="form-group">
+            <label for="filter-distance">Max Distance (km, Sample)</label>
+            <input
+              type="number"
+              id="filter-distance"
+              name="maxDistance"
+              min="1"
+              max="100"
+              step="0.5"
+              placeholder="e.g., 10"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="filter-connector">Connector Type</label>
+            <select id="filter-connector" name="connector">
+              <option value="">All Connectors</option>
+              <option value="CCS2">CCS2</option>
+              <option value="Type 2">Type 2</option>
+              <option value="CHAdeMO">CHAdeMO</option>
+              <option value="Bharat AC-001">Bharat AC-001</option>
+              <option value="Bharat DC-001">Bharat DC-001</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filter-speed">Charging Speed</label>
+            <select id="filter-speed" name="speed">
+              <option value="">All Speeds</option>
+              <option value="Slow">Slow (AC / Low kW)</option>
+              <option value="Fast">Fast (DC / Medium-High kW)</option>
+              <option value="Rapid">Rapid (High-Power DC)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="filter-max-price">Max Price per kWh (₹, Sample)</label>
+            <input
+              type="number"
+              id="filter-max-price"
+              name="maxPrice"
+              min="1"
+              max="100"
+              step="0.5"
+              placeholder="e.g., 20"
+            />
+          </div>
+
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="filter-available-only" name="availableOnly" />
+            <label for="filter-available-only">Show stations with available ports only</label>
+          </div>
+
+          <div class="filter-actions-row">
+            <button type="button" id="btn-reset-filters" class="btn-secondary">
+              <i data-lucide="rotate-ccw"></i>
+              <span>Reset Filters</span>
+            </button>
+
+            <button type="button" id="btn-apply-filters" class="btn-primary">
+              <i data-lucide="sliders-horizontal"></i>
+              <span>Apply Filters</span>
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
-  </div>
-</section>
+    </section>
+
     <!-- SCREENS 8 & 9: CHARGING TIME & COST CALCULATOR -->
-<section id="screen-calculator" class="screen" aria-label="Charging Time and Cost Calculator">
-  <header class="screen-header">
-    <button type="button" id="btn-back-from-calculator" class="btn-back" aria-label="Back">
-      <i data-lucide="arrow-left"></i>
-      <span>Back</span>
-    </button>
-    <h2 class="screen-title">Charge Calculator</h2>
-    <span class="sample-badge">Est. Tool</span>
-  </header>
+    <section id="screen-calculator" class="screen" aria-label="Charging Time and Cost Calculator">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-calculator" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">Charge Calculator</h2>
+        <span class="sample-badge">Est. Tool</span>
+      </header>
 
-  <div class="screen-body">
-    <form id="calculator-form" class="card calculator-form" novalidate>
-      <div class="form-group">
-        <label for="calc-capacity">Battery Capacity (kWh)</label>
-        <input
-          type="number"
-          id="calc-capacity"
-          name="capacity"
-          min="1"
-          max="300"
-          step="0.1"
-          placeholder="e.g., 40"
-          required
-        />
+      <div class="screen-body">
+        <form id="calculator-form" class="calculator-form" novalidate>
+          <div class="form-group">
+            <label for="calc-capacity">Battery Capacity (kWh)</label>
+            <input
+              type="number"
+              id="calc-capacity"
+              name="capacity"
+              min="1"
+              max="300"
+              step="0.1"
+              placeholder="e.g., 40"
+              required
+            />
+          </div>
+
+          <div class="form-row-two">
+            <div class="form-group">
+              <label for="calc-current-soc">Current Charge (%)</label>
+              <input
+                type="number"
+                id="calc-current-soc"
+                name="currentSoc"
+                min="0"
+                max="100"
+                step="1"
+                placeholder="e.g., 30"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="calc-target-soc">Target Charge (%)</label>
+              <input
+                type="number"
+                id="calc-target-soc"
+                name="targetSoc"
+                min="1"
+                max="100"
+                step="1"
+                placeholder="e.g., 80"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row-two">
+            <div class="form-group">
+              <label for="calc-power">Charger Power (kW)</label>
+              <input
+                type="number"
+                id="calc-power"
+                name="power"
+                min="0.5"
+                max="500"
+                step="0.5"
+                placeholder="e.g., 30"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="calc-price">Price per kWh (₹, Sample)</label>
+              <input
+                type="number"
+                id="calc-price"
+                name="price"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="e.g., 15"
+                required
+              />
+            </div>
+          </div>
+
+          <p id="calc-error-msg" class="form-error-msg" aria-live="polite"></p>
+        </form>
+
+        <div class="calculator-results-card">
+          <h4>Estimated Results</h4>
+
+          <div class="calc-results-grid">
+            <div class="calc-result-box">
+              <span class="meta-label">Energy Required</span>
+              <strong id="calc-energy-out">-- kWh</strong>
+            </div>
+
+            <div class="calc-result-box">
+              <span class="meta-label">Estimated Time</span>
+              <strong id="calc-time-out">-- hrs</strong>
+            </div>
+
+            <div class="calc-result-box">
+              <span class="meta-label">Estimated Cost</span>
+              <strong id="calc-cost-out">₹--</strong>
+            </div>
+          </div>
+
+          <p class="disclaimer-text">
+            Disclaimer: Calculations use ideal linear math and sample tariff rates. Real-world charging slows down near higher state-of-charge levels due to the battery charging curve, temperature, and station power sharing.
+          </p>
+        </div>
       </div>
-
-      <div class="form-row-two">
-        <div class="form-group">
-          <label for="calc-current-soc">Current Charge (%)</label>
-          <input
-            type="number"
-            id="calc-current-soc"
-            name="currentSoc"
-            min="0"
-            max="100"
-            step="1"
-            placeholder="e.g., 30"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="calc-target-soc">Target Charge (%)</label>
-          <input
-            type="number"
-            id="calc-target-soc"
-            name="targetSoc"
-            min="1"
-            max="100"
-            step="1"
-            placeholder="e.g., 80"
-            required
-          />
-        </div>
-      </div>
-
-      <div class="form-row-two">
-        <div class="form-group">
-          <label for="calc-power">Charger Power (kW)</label>
-          <input
-            type="number"
-            id="calc-power"
-            name="power"
-            min="0.5"
-            max="500"
-            step="0.5"
-            placeholder="e.g., 30"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="calc-price">Price per kWh (₹, Sample)</label>
-          <input
-            type="number"
-            id="calc-price"
-            name="price"
-            min="0"
-            max="100"
-            step="0.5"
-            placeholder="e.g., 15"
-            required
-          />
-        </div>
-      </div>
-
-      <p id="calc-error-msg" class="form-error-msg" aria-live="polite"></p>
-    </form>
-
-    <div class="card calculator-results-card">
-      <h4>Estimated Results</h4>
-
-      <div class="calc-results-grid">
-        <div class="calc-result-box">
-          <span class="meta-label">Energy Required</span>
-          <strong id="calc-energy-out">-- kWh</strong>
-        </div>
-
-        <div class="calc-result-box">
-          <span class="meta-label">Estimated Time</span>
-          <strong id="calc-time-out">-- hrs</strong>
-        </div>
-
-        <div class="calc-result-box">
-          <span class="meta-label">Estimated Cost</span>
-          <strong id="calc-cost-out">₹--</strong>
-        </div>
-      </div>
-
-      <p class="disclaimer-text">
-        Disclaimer: Calculations use ideal linear math and sample tariff rates. Real-world charging slows down near higher state-of-charge levels due to the battery charging curve, temperature, and station power sharing.
-      </p>
-    </div>
-  </div>
-</section>
-    <!-- SCREEN 10: RULE-BASED RECOMMENDATION (INSIDE #screen-home) -->
-<div id="home-recommended-card" class="card recommended-card" aria-label="Rule-Based Recommended Station">
-  <div class="rec-card-header">
-    <span class="rec-label">Recommended For You</span>
-    <span id="rec-mode-badge" class="rec-mode-badge">Rule-Based Logic (Not AI)</span>
-  </div>
-
-  <div class="rec-station-main">
-    <div>
-      <h3 id="rec-station-name" class="rec-station-name">GreenCharge Hub</h3>
-      <p id="rec-station-meta" class="rec-station-meta">Sample area • Compatible &amp; open port</p>
-    </div>
-    <div id="rec-station-score" class="rec-station-score">Score: --</div>
-  </div>
-
-  <ul id="rec-station-reasons" class="rec-station-reasons">
-    <li>Matched using transparent rules: connector compatibility, port availability, sample distance, power, and sample price.</li>
-  </ul>
-
-  <p class="disclaimer-text">
-    Note: Recommendations use deterministic rule-based scoring on sample station data—not artificial intelligence.
-  </p>
-</div>
-
-    <!-- Individual Charging Ports List -->
-    <article class="card detail-ports-card">
-      <div class="card-header-row">
-        <h4 class="section-heading">Charging Ports</h4>
-        <span id="detail-ports-count" class="muted-text">0 ports</span>
-      </div>
-      <div id="detail-ports-list" class="ports-list">
-        <!-- Populated dynamically by app.js -->
-      </div>
-    </article>
-  </div>
-
-  <!-- Sticky Bottom Action Bar -->
-  <div class="detail-action-bar">
-    <button type="button" id="btn-detail-book-now" class="btn-primary-action">
-      <i data-lucide="zap"></i>
-      <span>Book Now</span>
-    </button>
-  </div>
-</section>
+    </section>
 
     <!-- BOTTOM NAVIGATION BAR -->
     <nav id="bottom-nav" class="bottom-nav hidden">
-      <button class="nav-item active" data-target="screen-home">
+      <button type="button" class="nav-item active" data-target="screen-home">
         <i data-lucide="home"></i>
         <span>Home</span>
       </button>
-      <button class="nav-item" data-target="screen-explore">
+      <button type="button" class="nav-item" data-target="screen-explore">
         <i data-lucide="map-pin"></i>
         <span>Explore</span>
       </button>
-      <button class="nav-item" data-target="screen-vehicle">
+      <button type="button" class="nav-item" data-target="screen-vehicle">
         <i data-lucide="car"></i>
         <span>My Vehicle</span>
       </button>
-      <button class="nav-item" data-target="screen-bookings">
+      <button type="button" class="nav-item" data-target="screen-bookings">
         <i data-lucide="calendar-check"></i>
         <span>Bookings</span>
       </button>
-      <button class="nav-item" data-target="screen-profile">
+      <button type="button" class="nav-item" data-target="screen-profile">
         <i data-lucide="user"></i>
         <span>Profile</span>
       </button>
