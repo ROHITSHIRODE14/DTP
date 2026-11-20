@@ -958,7 +958,10 @@ body {
 .vehicle-form,
 .filters-form,
 .calculator-form,
-.calculator-results-card {
+.calculator-results-card,
+.booking-card,
+.payment-breakdown-card,
+.confirmation-card {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
@@ -1121,18 +1124,20 @@ body {
 }
 
 /* =========================================
-   SCREENS 6, 7, 8 & 9: VEHICLE, FILTERS & CALCULATOR
+   SCREENS 6, 7, 8, 9, 11, 12 & 13
    ========================================= */
 #screen-vehicle,
 #screen-filters,
-#screen-calculator {
+#screen-calculator,
+#screen-booking {
   background: var(--dark-navy);
   color: #F4F8FB;
 }
 
 #screen-vehicle label,
 #screen-filters label,
-#screen-calculator label {
+#screen-calculator label,
+#screen-booking label {
   color: #CBD5E1;
 }
 
@@ -1141,7 +1146,9 @@ body {
 #screen-filters input,
 #screen-filters select,
 #screen-calculator input,
-#screen-calculator select {
+#screen-calculator select,
+#screen-booking input,
+#screen-booking select {
   background: rgba(16, 29, 43, 0.9);
   color: var(--white);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -1180,4 +1187,69 @@ body {
   min-height: 16px;
   margin-bottom: 8px;
   color: #F87171;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.slot-pill-btn {
+  padding: 9px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(16, 29, 43, 0.8);
+  color: #F4F8FB;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.slot-pill-btn.active,
+.slot-pill-btn[aria-pressed="true"] {
+  background: rgba(22, 199, 132, 0.18);
+  border-color: var(--electric-green);
+  color: var(--electric-green);
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 13px;
+}
+
+.payment-row:last-child {
+  border-bottom: none;
+}
+
+.payment-row--highlight strong {
+  color: var(--electric-green);
+  font-size: 15px;
+}
+
+.confirmation-card {
+  border-color: rgba(22, 199, 132, 0.45);
+  background: linear-gradient(145deg, rgba(22, 199, 132, 0.14), rgba(16, 29, 43, 0.95));
+}
+
+.confirmation-card.hidden {
+  display: none;
+}
+
+.booking-id-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(22, 199, 132, 0.2);
+  color: var(--electric-green);
+  border: 1px solid rgba(22, 199, 132, 0.4);
+  margin-bottom: 8px;
 }
