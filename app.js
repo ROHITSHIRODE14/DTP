@@ -1,5 +1,5 @@
 // =========================================
-// GoEV CORE APPLICATION LOGIC (SCREENS 1–10)
+// GoEV CORE APPLICATION LOGIC (SCREENS 1–13)
 // =========================================
 
 let isSignupMode = false;
@@ -10,6 +10,9 @@ let previousScreenId = "screen-home";
 let vehiclePreviousScreenId = "screen-home";
 let filtersPreviousScreenId = "screen-explore";
 let calcPreviousScreenId = "screen-home";
+let bookingPreviousScreenId = "screen-station-details";
+let selectedBookingPortId = null;
+let selectedBookingSlot = "10:30 AM - 11:30 AM";
 
 const DEFAULT_GOEV_VEHICLE = {
   name: "Tata Nexon EV",
@@ -26,6 +29,15 @@ const DEFAULT_FILTER_STATE = {
   speed: "ALL",
   maxPrice: 30
 };
+
+const SAMPLE_TIME_SLOTS = [
+  "09:00 AM - 10:00 AM",
+  "10:30 AM - 11:30 AM",
+  "12:00 PM - 01:00 PM",
+  "02:30 PM - 03:30 PM",
+  "04:00 PM - 05:00 PM",
+  "06:30 PM - 07:30 PM"
+];
 
 let activeStationFilters = { ...DEFAULT_FILTER_STATE };
 
@@ -54,6 +66,39 @@ function getStations() {
     console.error("Failed to read goev_stations:", err);
   }
   return typeof INITIAL_STATIONS !== "undefined" ? INITIAL_STATIONS : [];
+}
+
+function saveStationsToStorage(stationsArr) {
+  try {
+    localStorage.setItem("goev_stations", JSON.stringify(stationsArr));
+    return true;
+  } catch (err) {
+    console.error("Failed to save goev_stations:", err);
+    return false;
+  }
+}
+
+function getBookingsFromStorage() {
+  try {
+    const raw = localStorage.getItem("goev_bookings");
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    console.error("Failed to read goev_bookings:", err);
+    return [];
+  }
+}
+
+function saveBookingToStorage(bookingObj) {
+  const existing = getBookingsFromStorage();
+  existing.unshift(bookingObj);
+  try {
+    localStorage.setItem("goev_bookings", JSON.stringify(existing));
+    return true;
+  } catch (err) {
+    console.error("Failed to save goev_bookings:", err);
+    return false;
+  }
 }
 
 function getVehicle() {
@@ -117,6 +162,19 @@ function getStationAggregateStatus(station) {
     label: fallbackLabel,
     cssClass: `status-pill--${fallbackLabel.toLowerCase()}`
   };
+}
+
+function refreshStationAggregateStatus(station) {
+  if (!Array.isArray(station.ports) || station.ports.length === 0) return;
+  if (station.ports.some((p) => normalizePortStatus(p.status) === "Available")) {
+    station.status = "Available";
+  } else if (station.ports.some((p) => normalizePortStatus(p.status) === "Reserved")) {
+    station.status = "Reserved";
+  } else if (station.ports.some((p) => normalizePortStatus(p.status) === "Occupied")) {
+    station.status = "Occupied";
+  } else {
+    station.status = "Unavailable";
+  }
 }
 
 function getMarkerColor(status) {
@@ -300,7 +358,6 @@ function scoreStationRuleBased(station, vehicle) {
   const vehicleConnector = String(vehicle?.connector || "CCS2").toLowerCase();
   const stationConnectors = getStationConnectorsList(station).map((c) => c.toLowerCase());
 
-  // Rule 1: Connector compatibility (30 pts)
   if (stationConnectors.includes(vehicleConnector)) {
     score += 30;
     reasons.push(`Supports your ${vehicle?.connector || "CCS2"} connector`);
@@ -309,7 +366,6 @@ function scoreStationRuleBased(station, vehicle) {
     reasons.push(`Check adapter for ${vehicle?.connector || "CCS2"}`);
   }
 
-  // Rule 2: Available ports (25 pts)
   const availablePortsCount = getAvailablePortCount(station);
   if (availablePortsCount > 0) {
     score += Math.min(25, 15 + availablePortsCount * 5);
@@ -318,19 +374,16 @@ function scoreStationRuleBased(station, vehicle) {
     reasons.push("No open ports currently available");
   }
 
-  // Rule 3: Sample distance proximity (20 pts)
   const distKm = Number(station.distanceKm ?? station.distance ?? 10);
   const clampedDist = Math.max(0, Math.min(25, distKm));
   score += Math.round(((25 - clampedDist) / 25) * 20);
   reasons.push(`${distKm} km away (sample distance)`);
 
-  // Rule 4: Charging speed in kW (15 pts)
   const powerKw = Number(station.powerKw ?? station.power ?? 22);
   const clampedPower = Math.max(0, Math.min(120, powerKw));
   score += Math.round((clampedPower / 120) * 15);
   reasons.push(`${powerKw} kW charging output`);
 
-  // Rule 5: Tariff price per kWh (10 pts)
   const pricePerKwh = Number(station.pricePerKwh ?? station.price ?? 16);
   const clampedPrice = Math.max(5, Math.min(30, pricePerKwh));
   score += Math.round(((30 - clampedPrice) / 25) * 10);
@@ -474,6 +527,292 @@ function openStationDetails(stationId) {
   }
 
   showScreen("screen-station-details");
+}
+
+// =========================================
+// SCREENS 11, 12 & 13: SLOT BOOKING, 20% ADVANCE & CONFIRMATION
+// =========================================
+function getTodayDateString() {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offsetMs).toISOString().split("T")[0];
+}
+
+function updatePaymentSimulationBreakdown(estimatedCost) {
+  const totalCost = Math.max(0, Number(estimatedCost) || 0);
+  // 20% Advance = Estimated Cost * 20 / 100
+  const advanceAmount = Math.round((totalCost * 20) / 100);
+  const remainingAmount = Math.max(0, totalCost - advanceAmount);
+
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  setText("booking-est-cost-val", `₹${totalCost}`);
+  setText("booking-advance-val", `₹${advanceAmount}`);
+  setText("booking-remaining-val", `₹${remainingAmount}`);
+
+  return { totalCost, advanceAmount, remainingAmount };
+}
+
+function renderBookingPortSelector(station, vehicleConnector) {
+  const portSelect = document.getElementById("booking-port-select");
+  const portNoteEl = document.getElementById("booking-port-status-note");
+  const ports = Array.isArray(station.ports) ? station.ports : [];
+
+  selectedBookingPortId = null;
+
+  if (!portSelect) return;
+
+  if (ports.length === 0) {
+    portSelect.innerHTML = `<option value="">No ports listed</option>`;
+    portSelect.disabled = true;
+    if (portNoteEl) {
+      portNoteEl.textContent = "This sample station has no ports available for booking.";
+    }
+    return;
+  }
+
+  portSelect.disabled = false;
+  portSelect.innerHTML = ports
+    .map((port, idx) => {
+      const portId = String(port.id || `Port-${idx + 1}`);
+      const connector = port.connector || port.type || station.connector || "CCS2";
+      const power = port.powerKw || port.power || station.powerKw || station.power || "--";
+      const status = normalizePortStatus(port.status);
+      const isOpen = status === "Available";
+      const isCompatible =
+        !vehicleConnector ||
+        String(connector).toLowerCase() === String(vehicleConnector).toLowerCase();
+
+      const labelSuffix = !isOpen
+        ? `(${status} - Blocked)`
+        : isCompatible
+        ? `(Available • Matches EV)`
+        : `(Available • ${connector})`;
+
+      if (!selectedBookingPortId && isOpen && isCompatible) {
+        selectedBookingPortId = portId;
+      }
+
+      return `<option value="${portId}" ${!isOpen ? "disabled" : ""}>${portId} • ${connector} • ${power} kW ${labelSuffix}</option>`;
+    })
+    .join("");
+
+  // Fallback to first available port even if connector differs
+  if (!selectedBookingPortId) {
+    const firstOpen = ports.find((p) => normalizePortStatus(p.status) === "Available");
+    if (firstOpen) {
+      selectedBookingPortId = String(firstOpen.id || "Port-1");
+    }
+  }
+
+  if (selectedBookingPortId) {
+    portSelect.value = selectedBookingPortId;
+  } else {
+    portSelect.value = "";
+    portSelect.disabled = true;
+  }
+
+  if (portNoteEl) {
+    portNoteEl.textContent = selectedBookingPortId
+      ? "Occupied, Reserved, and Unavailable ports are automatically blocked."
+      : "No Available ports right now. Occupied/Reserved ports cannot be booked.";
+  }
+}
+
+function renderBookingTimeSlots() {
+  const slotsContainer = document.getElementById("booking-slots-list");
+  if (!slotsContainer) return;
+
+  if (!SAMPLE_TIME_SLOTS.includes(selectedBookingSlot)) {
+    selectedBookingSlot = SAMPLE_TIME_SLOTS[0];
+  }
+
+  slotsContainer.innerHTML = SAMPLE_TIME_SLOTS
+    .map((slot) => {
+      const isSelected = slot === selectedBookingSlot;
+      return `
+        <button
+          type="button"
+          class="slot-pill-btn ${isSelected ? "active" : ""}"
+          aria-pressed="${isSelected ? "true" : "false"}"
+          data-slot="${slot}"
+        >
+          ${slot}
+        </button>
+      `;
+    })
+    .join("");
+
+  slotsContainer.querySelectorAll(".slot-pill-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedBookingSlot = btn.dataset.slot;
+      renderBookingTimeSlots();
+    });
+  });
+}
+
+function openSlotBooking(stationId = null) {
+  const targetId = stationId || selectedStationId;
+  const stations = getStations();
+  const station = stations.find((s) => String(s.id) === String(targetId));
+  if (!station) return;
+
+  selectedStationId = station.id;
+
+  const activeScreen = document.querySelector(".screen.active");
+  if (activeScreen && activeScreen.id !== "screen-booking") {
+    bookingPreviousScreenId = activeScreen.id;
+  }
+
+  const vehicle = getVehicle();
+  const estimate = computeStationEstimate(station, vehicle);
+
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  setText("booking-station-name", station.name);
+  setText("booking-station-meta", `${station.address || "Sample Area"} • ${estimate.powerKw} kW • ₹${estimate.pricePerKwh}/kWh`);
+  setText("booking-vehicle-summary", `${vehicle.name} (${vehicle.connector}, ${vehicle.currentSoc}% → ${vehicle.targetSoc}%)`);
+  setText("booking-est-energy-val", `${estimate.energyKwh} kWh`);
+  setText("booking-est-time-val", `${estimate.estimatedHours} hrs`);
+
+  updatePaymentSimulationBreakdown(estimate.estimatedCost);
+  renderBookingPortSelector(station, vehicle.connector);
+
+  const dateInput = document.getElementById("booking-date-input");
+  if (dateInput && !dateInput.value) {
+    dateInput.value = getTodayDateString();
+  }
+
+  renderBookingTimeSlots();
+
+  // Hide previous confirmation card when starting a new slot selection
+  const confirmCard = document.getElementById("booking-confirmation-card");
+  if (confirmCard) confirmCard.classList.add("hidden");
+
+  const errEl = document.getElementById("booking-error-msg");
+  if (errEl) errEl.textContent = "";
+
+  const payBtn = document.getElementById("btn-simulate-payment");
+  if (payBtn) {
+    payBtn.disabled = !selectedBookingPortId;
+  }
+
+  showScreen("screen-booking");
+}
+
+function handleSimulateAdvancePayment() {
+  const errEl = document.getElementById("booking-error-msg");
+  const setErr = (msg) => {
+    if (errEl) errEl.textContent = msg;
+  };
+  setErr("");
+
+  const stations = getStations();
+  const stationIndex = stations.findIndex((s) => String(s.id) === String(selectedStationId));
+  if (stationIndex === -1) {
+    return setErr("Station not found. Please go back and select a station.");
+  }
+
+  const station = stations[stationIndex];
+  const portSelect = document.getElementById("booking-port-select");
+  const chosenPortId = String(portSelect?.value || selectedBookingPortId || "");
+  const chosenDate = document.getElementById("booking-date-input")?.value || "";
+  const chosenSlot = selectedBookingSlot || "";
+
+  if (!chosenPortId) {
+    return setErr("Please select an Available charging port.");
+  }
+  if (!chosenDate) {
+    return setErr("Please select a booking date.");
+  }
+  if (!chosenSlot) {
+    return setErr("Please select a time slot.");
+  }
+
+  const ports = Array.isArray(station.ports) ? station.ports : [];
+  const portIndex = ports.findIndex(
+    (p, idx) => String(p.id || `Port-${idx + 1}`) === chosenPortId
+  );
+
+  if (portIndex === -1) {
+    return setErr("Selected port was not found.");
+  }
+
+  const currentPortStatus = normalizePortStatus(ports[portIndex].status);
+  if (currentPortStatus !== "Available") {
+    return setErr(`Port ${chosenPortId} is currently ${currentPortStatus} and cannot be booked.`);
+  }
+
+  const vehicle = getVehicle();
+  const estimate = computeStationEstimate(station, vehicle);
+  const { totalCost, advanceAmount, remainingAmount } = updatePaymentSimulationBreakdown(
+    estimate.estimatedCost
+  );
+  const user = JSON.parse(localStorage.getItem("goev_user")) || {
+    name: "Demo EV Driver",
+    email: "demo@goev.app"
+  };
+
+  // Mark port as Reserved in goev_stations
+  station.ports[portIndex].status = "Reserved";
+  refreshStationAggregateStatus(station);
+  stations[stationIndex] = station;
+  saveStationsToStorage(stations);
+
+  const bookingId = `GOEV-${Math.floor(100000 + Math.random() * 900000)}`;
+  const bookingRecord = {
+    bookingId,
+    stationId: station.id,
+    stationName: station.name,
+    stationAddress: station.address || "Sample Area",
+    portId: chosenPortId,
+    connector: station.ports[portIndex].connector || station.connector || vehicle.connector,
+    date: chosenDate,
+    timeSlot: chosenSlot,
+    vehicleName: vehicle.name,
+    energyKwh: estimate.energyKwh,
+    estimatedHours: estimate.estimatedHours,
+    totalEstimatedCost: totalCost,
+    advancePaidSimulated: advanceAmount,
+    remainingBalanceSimulated: remainingAmount,
+    status: "Confirmed (Simulated 20% Advance)",
+    driverName: user.name,
+    createdAt: new Date().toISOString()
+  };
+
+  saveBookingToStorage(bookingRecord);
+
+  // Refresh port selector so the newly reserved port shows Reserved
+  renderBookingPortSelector(station, vehicle.connector);
+  const payBtn = document.getElementById("btn-simulate-payment");
+  if (payBtn) payBtn.disabled = !selectedBookingPortId;
+
+  // Render Screen 13 Confirmation Card
+  const confirmCard = document.getElementById("booking-confirmation-card");
+  if (confirmCard) {
+    confirmCard.classList.remove("hidden");
+    const setText = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+
+    setText("conf-booking-id", `Booking ID: ${bookingRecord.bookingId}`);
+    setText("conf-station-name", bookingRecord.stationName);
+    setText("conf-port-slot", `${bookingRecord.portId} • ${bookingRecord.date} • ${bookingRecord.timeSlot}`);
+    setText("conf-vehicle-info", `${bookingRecord.vehicleName} (${bookingRecord.energyKwh} kWh est.)`);
+    setText(
+      "conf-payment-summary",
+      `Simulated Advance Paid (20%): ₹${bookingRecord.advancePaidSimulated} • Remaining at Station (80%): ₹${bookingRecord.remainingBalanceSimulated}`
+    );
+  }
+
+  renderIcons();
 }
 
 // =========================================
@@ -727,7 +1066,6 @@ function renderHomeDashboard() {
     .trim()
     .toLowerCase();
 
-  // Render Screen 10 Rule-Based Pick
   const recContainer = document.getElementById("home-recommended-card");
   const topPick = getRecommendedStationRuleBased(filteredStations);
   if (recContainer) {
@@ -923,6 +1261,7 @@ function handleAuthSubmit(event) {
 
 window.openStationDetails = openStationDetails;
 window.openCalculatorScreen = openCalculatorScreen;
+window.openSlotBooking = openSlotBooking;
 window.calculateChargingEstimate = calculateChargingEstimate;
 
 // =========================================
@@ -978,7 +1317,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById("screen-bookings")) {
       showScreen("screen-bookings");
     } else {
-      alert("Bookings History (Screen 14) will be built right after Slot Booking!");
+      alert("Bookings History (Screen 14) is coming next!");
     }
   });
 
@@ -989,11 +1328,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-detail-book-now")?.addEventListener("click", () => {
     if (!selectedStationId) return;
-    if (typeof openSlotBooking === "function") {
-      openSlotBooking(selectedStationId);
-    } else {
-      alert("Slot Booking & 20% Advance Simulation (Screens 11–13) is our very next step!");
-    }
+    openSlotBooking(selectedStationId);
+  });
+
+  // Screens 11, 12 & 13: Slot Booking & Simulated Advance Payment
+  document.getElementById("btn-back-from-booking")?.addEventListener("click", () => {
+    showScreen(bookingPreviousScreenId || "screen-station-details");
+  });
+
+  document.getElementById("booking-port-select")?.addEventListener("change", (e) => {
+    selectedBookingPortId = e.target.value || null;
+    const payBtn = document.getElementById("btn-simulate-payment");
+    if (payBtn) payBtn.disabled = !selectedBookingPortId;
+  });
+
+  document.getElementById("btn-simulate-payment")?.addEventListener("click", () => {
+    handleSimulateAdvancePayment();
   });
 
   // Screen 6: EV Vehicle Profile
