@@ -477,6 +477,14 @@ body {
   border-radius: 999px;
 }
 
+.gps-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .location-pill {
   display: inline-flex;
   align-items: center;
@@ -486,13 +494,28 @@ body {
   border-radius: 999px;
   font-size: 11px;
   color: #E2E8F0;
-  margin-bottom: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .location-pill i {
   width: 14px;
   height: 14px;
   color: var(--electric-green);
+  flex-shrink: 0;
+}
+
+.btn-gps-refresh {
+  background: rgba(22, 199, 132, 0.18);
+  color: var(--electric-green);
+  border: 1px solid rgba(22, 199, 132, 0.4);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .home-search-box {
@@ -536,8 +559,8 @@ body {
 
 .quick-actions-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
   margin-bottom: 18px;
 }
 
@@ -545,24 +568,24 @@ body {
   background: var(--white);
   border: 1px solid var(--border-grey);
   border-radius: var(--radius-md);
-  padding: 12px 8px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
 }
 
 .quick-action-btn span {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-dark);
 }
 
 .qa-icon {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -573,6 +596,7 @@ body {
 .teal-bg { background: var(--teal); }
 .navy-bg { background: var(--dark-navy); }
 .green-bg { background: #0E9F6E; }
+.amber-bg { background: #D97706; }
 
 .section-block {
   margin-bottom: 18px;
@@ -764,6 +788,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .subscreen-header h2 {
@@ -775,6 +800,13 @@ body {
   font-size: 11px;
   color: #94A3B8;
   margin-top: 2px;
+}
+
+.header-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .map-legend {
@@ -957,7 +989,6 @@ body {
 .detail-ports-card,
 .vehicle-form,
 .filters-form,
-.calculator-form,
 .calculator-results-card,
 .booking-card,
 .payment-breakdown-card,
@@ -1126,11 +1157,91 @@ body {
 }
 
 /* =========================================
+   REAL-TIME CALCULATOR POPUP MODAL (#calculator-modal)
+   ========================================= */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 12, 20, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 80;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-height: 90%;
+  overflow-y: auto;
+  background: var(--dark-navy);
+  color: var(--white);
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  border-top: 1px solid rgba(22, 199, 132, 0.35);
+  padding: 16px;
+  animation: slideUp 0.22s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-telemetry-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(22, 199, 132, 0.12);
+  border: 1px solid rgba(22, 199, 132, 0.3);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--electric-green);
+  margin-bottom: 12px;
+}
+
+.btn-sync-pill {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  border: none;
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* =========================================
    SCREENS 6–9 & 11–15
    ========================================= */
 #screen-vehicle,
 #screen-filters,
-#screen-calculator,
 #screen-booking,
 #screen-bookings,
 #screen-profile {
@@ -1140,7 +1251,7 @@ body {
 
 #screen-vehicle label,
 #screen-filters label,
-#screen-calculator label,
+#calculator-modal label,
 #screen-booking label {
   color: #CBD5E1;
 }
@@ -1149,8 +1260,8 @@ body {
 #screen-vehicle select,
 #screen-filters input,
 #screen-filters select,
-#screen-calculator input,
-#screen-calculator select,
+#calculator-modal input,
+#calculator-modal select,
 #screen-booking input,
 #screen-booking select {
   background: rgba(16, 29, 43, 0.9);
@@ -1256,6 +1367,22 @@ body {
   color: var(--electric-green);
   border: 1px solid rgba(22, 199, 132, 0.4);
   margin-bottom: 8px;
+}
+
+.live-telemetry-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: rgba(16, 29, 43, 0.85);
+  border: 1px solid rgba(22, 199, 132, 0.25);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #CBD5E1;
+}
+
+.live-telemetry-strip strong {
+  color: var(--electric-green);
 }
 
 .booking-kv-grid {
