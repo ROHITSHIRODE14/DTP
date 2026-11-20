@@ -1,18 +1,25 @@
 // =========================================
 // GoEV CORE APPLICATION LOGIC (SCREENS 1–15)
+// Real-Time GPS + Live Calculator Modal + Telemetry
 // =========================================
 
 let isSignupMode = false;
 let goevMap = null;
 let mapMarkersLayer = null;
+let userLocationMarker = null;
 let selectedStationId = null;
 let previousScreenId = "screen-home";
 let vehiclePreviousScreenId = "screen-home";
 let filtersPreviousScreenId = "screen-explore";
-let calcPreviousScreenId = "screen-home";
 let bookingPreviousScreenId = "screen-station-details";
 let selectedBookingPortId = null;
 let selectedBookingSlot = "10:30 AM - 11:30 AM";
+
+// Real-time GPS state (defaults to Pimpri-Chinchwad reference if GPS is off/denied)
+const FALLBACK_COORDS = { lat: 18.6298, lng: 73.7997 };
+let liveCoords = { ...FALLBACK_COORDS, accuracy: null, isLiveGps: false };
+let gpsWatchId = null;
+let telemetryTimerId = null;
 
 const DEFAULT_GOEV_VEHICLE = {
   name: "Tata Nexon EV",
@@ -23,7 +30,7 @@ const DEFAULT_GOEV_VEHICLE = {
 };
 
 const DEFAULT_FILTER_STATE = {
-  maxDistance: 25,
+  maxDistance: 50,
   connector: "ALL",
   availableOnly: false,
   speed: "ALL",
@@ -129,6 +136,108 @@ function saveVehicleToStorage(vehicleObj) {
   }
 }
 
+// =========================================
+// REAL-TIME GPS & HAVERSINE DISTANCE ENGINE
+// =========================================
+function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(Number(lat2) - Number(lat1));
+  const dLng = toRad(Number(lng2) - Number(lng1));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(Number(lat1))) *
+      Math.cos(toRad(Number(lat2))) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
+function getStationDistanceKm(station) {
+  if (typeof station.lat === "number" && typeof station.lng === "number") {
+    return haversineDistanceKm(liveCoords.lat, liveCoords.lng, station.lat, station.lng);
+  }
+  return Number(station.distanceKm ?? station.distance ?? 5);
+}
+
+function updateGpsStatusBadges(statusText, isLive) {
+  const homeLocEl = document.getElementById("home-gps-label");
+  const exploreSubEl = document.getElementById("explore-gps-subtitle");
+  if (homeLocEl) {
+    homeLocEl.textContent = statusText;
+  }
+  if (exploreSubEl) {
+    exploreSubEl.textContent = isLive
+      ? `${statusText} • Live pins`
+      : `${statusText} • Fallback pins`;
+  }
+}
+
+function requestLiveGpsLocation(centerMapOnFix = false) {
+  if (!navigator.geolocation) {
+    liveCoords = { ...FALLBACK_COORDS, accuracy: null, isLiveGps: false };
+    updateGpsStatusBadges("GPS unsupported • Using Pimpri-Chinchwad", false);
+    return;
+  }
+
+  updateGpsStatusBadges("Acquiring live GPS...", false);
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      liveCoords = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: Math.round(pos.coords.accuracy || 0),
+        isLiveGps: true
+      };
+      updateGpsStatusBadges(
+        `Live GPS (${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)} • ±${liveCoords.accuracy}m)`,
+        true
+      );
+      if (goevMap && centerMapOnFix) {
+        goevMap.setView([liveCoords.lat, liveCoords.lng], 13);
+      }
+      refreshActiveViews();
+    },
+    (err) => {
+      console.warn("Geolocation fallback:", err.message);
+      liveCoords = { ...FALLBACK_COORDS, accuracy: null, isLiveGps: false };
+      updateGpsStatusBadges("GPS off/denied • Using Pimpri-Chinchwad", false);
+      refreshActiveViews();
+    },
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }
+  );
+
+  if (gpsWatchId === null && navigator.geolocation.watchPosition) {
+    gpsWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        liveCoords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy || 0),
+          isLiveGps: true
+        };
+        updateGpsStatusBadges(
+          `Live GPS (${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)} • ±${liveCoords.accuracy}m)`,
+          true
+        );
+        refreshActiveViews();
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  }
+}
+
+function refreshActiveViews() {
+  const activeScreen = document.querySelector(".screen.active");
+  if (!activeScreen) return;
+  if (activeScreen.id === "screen-home") renderHomeDashboard();
+  else if (activeScreen.id === "screen-explore") renderExploreScreen();
+  else if (activeScreen.id === "screen-bookings") renderBookingsScreen();
+}
+
 function normalizePortStatus(status) {
   const clean = String(status || "Unavailable").toLowerCase();
   if (clean === "available") return "Available";
@@ -223,7 +332,7 @@ function getStationConnectorsList(station) {
 }
 
 // =========================================
-// SCREENS 8 & 9: CHARGING TIME & COST CALCULATOR
+// REAL-TIME CHARGE CALCULATOR POPUP MODAL
 // =========================================
 function calculateChargingEstimate({
   capacityKwh,
@@ -305,13 +414,43 @@ function computeStationEstimate(station, vehicle) {
   };
 }
 
+function populateCalculatorStationDropdown(preferredStationId = null) {
+  const selectEl = document.getElementById("calc-station-select");
+  const stations = getStations();
+  if (!selectEl) return;
+
+  selectEl.innerHTML = stations
+    .map((s) => {
+      const dist = getStationDistanceKm(s);
+      const pwr = s.powerKw || s.power || 30;
+      const rate = s.pricePerKwh || s.price || 15;
+      return `<option value="${s.id}" data-power="${pwr}" data-price="${rate}">${s.name} (${dist} km • ${pwr} kW • ₹${rate}/kWh)</option>`;
+    })
+    .join("");
+
+  const activeId = preferredStationId || selectedStationId || (stations[0] && stations[0].id);
+  if (activeId) {
+    selectEl.value = String(activeId);
+  }
+}
+
+function syncCalculatorWithStation(stationId) {
+  const stations = getStations();
+  const station = stations.find((s) => String(s.id) === String(stationId));
+  if (!station) return;
+
+  const powerEl = document.getElementById("calc-power");
+  const priceEl = document.getElementById("calc-price");
+  if (powerEl) powerEl.value = station.powerKw || station.power || 30;
+  if (priceEl) priceEl.value = station.pricePerKwh || station.price || 15;
+}
+
 function fillCalculatorFromVehicleAndStation(stationId = null) {
   const vehicle = getVehicle();
-  const stations = getStations();
-  const station =
-    stations.find((s) => String(s.id) === String(stationId || selectedStationId)) ||
-    stations[0] ||
-    {};
+  populateCalculatorStationDropdown(stationId);
+
+  const selectEl = document.getElementById("calc-station-select");
+  const chosenStationId = selectEl ? selectEl.value : stationId;
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -321,8 +460,7 @@ function fillCalculatorFromVehicleAndStation(stationId = null) {
   setVal("calc-capacity", vehicle.capacity);
   setVal("calc-current-soc", vehicle.currentSoc);
   setVal("calc-target-soc", vehicle.targetSoc);
-  setVal("calc-power", station.powerKw || station.power || 30);
-  setVal("calc-price", station.pricePerKwh || station.price || 15);
+  syncCalculatorWithStation(chosenStationId);
 }
 
 function runAndRenderCalculator() {
@@ -344,6 +482,15 @@ function runAndRenderCalculator() {
   const energyOut = document.getElementById("calc-energy-out");
   const timeOut = document.getElementById("calc-time-out");
   const costOut = document.getElementById("calc-cost-out");
+  const liveRateOut = document.getElementById("calc-live-clock-out");
+
+  if (liveRateOut) {
+    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const kwVal = Number(power) || 0;
+    const rateVal = Number(price) || 0;
+    const kwPerMin = ((kwVal * rateVal) / 60).toFixed(2);
+    liveRateOut.textContent = `Live @ ${nowTime} • ~₹${kwPerMin}/min draw`;
+  }
 
   if (!result.valid) {
     if (errEl) errEl.textContent = result.error;
@@ -362,14 +509,18 @@ function runAndRenderCalculator() {
   return result;
 }
 
-function openCalculatorScreen(stationId = null) {
-  const activeScreen = document.querySelector(".screen.active");
-  if (activeScreen && activeScreen.id !== "screen-calculator") {
-    calcPreviousScreenId = activeScreen.id;
-  }
+function openCalculatorModal(stationId = null) {
+  const modal = document.getElementById("calculator-modal");
+  if (!modal) return;
   fillCalculatorFromVehicleAndStation(stationId);
   runAndRenderCalculator();
-  showScreen("screen-calculator");
+  modal.classList.remove("hidden");
+  renderIcons();
+}
+
+function closeCalculatorModal() {
+  const modal = document.getElementById("calculator-modal");
+  if (modal) modal.classList.add("hidden");
 }
 
 // =========================================
@@ -398,10 +549,10 @@ function scoreStationRuleBased(station, vehicle) {
     reasons.push("No open ports currently available");
   }
 
-  const distKm = Number(station.distanceKm ?? station.distance ?? 10);
+  const distKm = getStationDistanceKm(station);
   const clampedDist = Math.max(0, Math.min(25, distKm));
   score += Math.round(((25 - clampedDist) / 25) * 20);
-  reasons.push(`${distKm} km away (sample distance)`);
+  reasons.push(`${distKm} km away (${liveCoords.isLiveGps ? "live GPS" : "demo zone"})`);
 
   const powerKw = Number(station.powerKw ?? station.power ?? 22);
   const clampedPower = Math.max(0, Math.min(120, powerKw));
@@ -417,6 +568,7 @@ function scoreStationRuleBased(station, vehicle) {
     station,
     score,
     availablePortsCount,
+    distKm,
     reasons
   };
 }
@@ -433,9 +585,7 @@ function getRecommendedStationRuleBased(stationsList = null) {
       if (b.availablePortsCount !== a.availablePortsCount) {
         return b.availablePortsCount - a.availablePortsCount;
       }
-      const distA = Number(a.station.distanceKm ?? a.station.distance ?? 999);
-      const distB = Number(b.station.distanceKm ?? b.station.distance ?? 999);
-      return distA - distB;
+      return a.distKm - b.distKm;
     });
 
   return ranked[0];
@@ -509,6 +659,7 @@ function openStationDetails(stationId) {
   const vehicle = getVehicle();
   const estimate = computeStationEstimate(station, vehicle);
   const aggStatus = getStationAggregateStatus(station);
+  const distVal = getStationDistanceKm(station);
 
   const setText = (id, text) => {
     const el = document.getElementById(id);
@@ -524,8 +675,7 @@ function openStationDetails(stationId) {
     badgeEl.className = `status-pill ${aggStatus.cssClass}`;
   }
 
-  const distVal = station.distanceKm ?? station.distance;
-  setText("detail-station-distance", distVal !== undefined ? `${distVal} km` : "Sample km");
+  setText("detail-station-distance", `${distVal} km`);
   setText("detail-station-type", station.chargerType || station.type || "DC Fast");
   setText("detail-station-power", `${estimate.powerKw} kW`);
   setText("detail-station-price", `₹${estimate.pricePerKwh} / kWh`);
@@ -796,6 +946,11 @@ function handleSimulateAdvancePayment() {
     date: chosenDate,
     timeSlot: chosenSlot,
     vehicleName: vehicle.name,
+    capacityKwh: vehicle.capacity,
+    currentSoc: vehicle.currentSoc,
+    targetSoc: vehicle.targetSoc,
+    powerKw: estimate.powerKw,
+    pricePerKwh: estimate.pricePerKwh,
     energyKwh: estimate.energyKwh,
     estimatedHours: estimate.estimatedHours,
     totalEstimatedCost: totalCost,
@@ -834,7 +989,7 @@ function handleSimulateAdvancePayment() {
 }
 
 // =========================================
-// SCREEN 14: BOOKINGS HISTORY & MANAGEMENT
+// SCREEN 14: BOOKINGS HISTORY & LIVE TELEMETRY
 // =========================================
 function updateBookingStatus(bookingId, newStatus) {
   const bookings = getBookingsFromStorage();
@@ -854,6 +1009,35 @@ function updateBookingStatus(bookingId, newStatus) {
   renderBookingsScreen();
 }
 
+function getLiveTelemetryForBooking(booking) {
+  const createdMs = booking.createdAt ? new Date(booking.createdAt).getTime() : Date.now();
+  const elapsedSec = Math.max(0, Math.floor((Date.now() - createdMs) / 1000));
+  const startSoc = Number(booking.currentSoc ?? 30);
+  const targetSoc = Number(booking.targetSoc ?? 80);
+  const cap = Number(booking.capacityKwh ?? 40);
+  const powerKw = Number(booking.powerKw ?? 30);
+  const rate = Number(booking.pricePerKwh ?? 15);
+
+  // Accelerated real-time simulation: 1 real second = 1 minute of simulated charging
+  const simMinutesElapsed = elapsedSec;
+  const kwhDelivered = Math.min(
+    Number(booking.energyKwh || (cap * (targetSoc - startSoc)) / 100),
+    Number(((powerKw * simMinutesElapsed) / 60).toFixed(2))
+  );
+  const liveSoc = Math.min(
+    targetSoc,
+    Math.round(startSoc + (kwhDelivered / Math.max(1, cap)) * 100)
+  );
+  const liveAccruedCost = Math.round(kwhDelivered * rate);
+
+  return {
+    liveSoc,
+    kwhDelivered,
+    liveAccruedCost,
+    elapsedFormatted: `${Math.floor(simMinutesElapsed / 60)}h ${simMinutesElapsed % 60}m sim`
+  };
+}
+
 function renderBookingsScreen() {
   const listEl = document.getElementById("bookings-history-list");
   const countEl = document.getElementById("bookings-count-label");
@@ -870,7 +1054,7 @@ function renderBookingsScreen() {
       <div class="booking-history-card">
         <h4 class="port-item-title">No Slot Bookings Yet</h4>
         <p class="muted-text" style="margin-top:4px;">
-          Open any charging station, tap <strong>Book Charging Slot</strong>, and simulate a 20% advance payment to see your booking here.
+          Open any charging station, tap <strong>Book Charging Slot</strong>, and simulate a 20% advance payment to see live slot telemetry here.
         </p>
       </div>
     `;
@@ -889,6 +1073,7 @@ function renderBookingsScreen() {
           : "status-pill--occupied";
 
       const isActiveReservation = status === "Reserved";
+      const te = getLiveTelemetryForBooking(b);
 
       return `
         <article class="booking-history-card">
@@ -901,10 +1086,16 @@ function renderBookingsScreen() {
             <span class="status-pill ${badgeClass}">${status}</span>
           </div>
 
+          <div class="live-telemetry-strip">
+            <span>Live SoC: <strong>${isActiveReservation ? `${te.liveSoc}%` : `${b.targetSoc || 80}%`}</strong></span>
+            <span>Delivered: <strong>${isActiveReservation ? `${te.kwhDelivered} kWh` : `${b.energyKwh} kWh`}</strong></span>
+            <span>Session Cost: <strong>₹${isActiveReservation ? te.liveAccruedCost : b.totalEstimatedCost}</strong></span>
+          </div>
+
           <div class="booking-kv-grid">
             <div>
-              <span class="meta-label">Vehicle &amp; Est.</span>
-              <strong class="meta-value">${b.vehicleName} (${b.energyKwh} kWh)</strong>
+              <span class="meta-label">Vehicle</span>
+              <strong class="meta-value">${b.vehicleName}</strong>
             </div>
             <div>
               <span class="meta-label">20% Advance / 80% Due</span>
@@ -962,7 +1153,7 @@ function handleResetSampleStations() {
     activeStationFilters = { ...DEFAULT_FILTER_STATE };
     const msgEl = document.getElementById("profile-action-msg");
     if (msgEl) {
-      msgEl.textContent = "Sample charging stations & filters reset to initial state.";
+      msgEl.textContent = "Station data & filters reset to default baseline.";
       msgEl.style.color = "#16C784";
     }
   }
@@ -1006,7 +1197,7 @@ function getFilteredStations() {
   const allStations = getStations();
 
   return allStations.filter((station) => {
-    const dist = Number(station.distanceKm ?? station.distance ?? 0);
+    const dist = getStationDistanceKm(station);
     if (dist > activeStationFilters.maxDistance) return false;
 
     if (activeStationFilters.connector !== "ALL") {
@@ -1092,7 +1283,7 @@ function initOrUpdateMap(stations) {
       fallbackPins.innerHTML = stations
         .map(
           (s) =>
-            `<button type="button" class="fallback-pin-btn" style="background:${getMarkerColor(s.status)}" onclick="openStationDetails('${s.id}')">${s.name} (${s.distance}km)</button>`
+            `<button type="button" class="fallback-pin-btn" style="background:${getMarkerColor(s.status)}" onclick="openStationDetails('${s.id}')">${s.name} (${getStationDistanceKm(s)}km)</button>`
         )
         .join("");
     }
@@ -1100,7 +1291,7 @@ function initOrUpdateMap(stations) {
   }
 
   if (!goevMap) {
-    goevMap = L.map("goev-map").setView([18.6298, 73.7997], 13);
+    goevMap = L.map("goev-map").setView([liveCoords.lat, liveCoords.lng], 13);
 
     const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -1132,9 +1323,23 @@ function initOrUpdateMap(stations) {
 
   mapMarkersLayer.clearLayers();
 
+  // Plot user current position marker
+  userLocationMarker = L.circleMarker([liveCoords.lat, liveCoords.lng], {
+    radius: 8,
+    fillColor: "#38BDF8",
+    color: "#FFFFFF",
+    weight: 2.5,
+    opacity: 1,
+    fillOpacity: 1
+  }).bindPopup(
+    `<strong>${liveCoords.isLiveGps ? "Your Live GPS Location" : "Demo Reference Location"}</strong><br/>${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)}`
+  );
+  userLocationMarker.addTo(mapMarkersLayer);
+
   stations.forEach((station) => {
     const color = getMarkerColor(station.status);
     const availPorts = getAvailablePortCount(station);
+    const distKm = getStationDistanceKm(station);
 
     const marker = L.circleMarker([station.lat, station.lng], {
       radius: 9,
@@ -1148,7 +1353,7 @@ function initOrUpdateMap(stations) {
     marker.bindPopup(`
       <div>
         <strong>${station.name}</strong><br/>
-        Distance: ${station.distance} km<br/>
+        Distance: ${distKm} km<br/>
         Connector: ${station.connector}<br/>
         Power: ${station.power} kW<br/>
         Price: ₹${station.pricePerKwh}/kWh<br/>
@@ -1166,10 +1371,12 @@ function initOrUpdateMap(stations) {
 }
 
 function renderExploreScreen() {
-  const stations = getFilteredStations();
+  const stations = getFilteredStations().sort(
+    (a, b) => getStationDistanceKm(a) - getStationDistanceKm(b)
+  );
   const countEl = document.getElementById("explore-station-count");
   if (countEl) {
-    countEl.textContent = `${stations.length} sample stations`;
+    countEl.textContent = `${stations.length} stations`;
   }
 
   initOrUpdateMap(stations);
@@ -1182,6 +1389,7 @@ function renderExploreScreen() {
       listEl.innerHTML = stations
         .map((station) => {
           const availPorts = getAvailablePortCount(station);
+          const distKm = getStationDistanceKm(station);
           return `
             <div class="station-card">
               <div class="station-card-top">
@@ -1189,7 +1397,7 @@ function renderExploreScreen() {
                 <span class="status-pill ${getStatusClass(station.status)}">${station.status}</span>
               </div>
               <div class="station-meta">
-                <span><i data-lucide="navigation"></i>${station.distance} km</span>
+                <span><i data-lucide="navigation"></i>${distKm} km</span>
                 <span><i data-lucide="plug"></i>${station.connector}</span>
                 <span><i data-lucide="zap"></i>${station.power} kW</span>
                 <span><i data-lucide="indian-rupee"></i>₹${station.pricePerKwh}/kWh</span>
@@ -1220,7 +1428,9 @@ function renderHomeDashboard() {
 
   const vehicle = getVehicle();
   const allStations = getStations();
-  const filteredStations = getFilteredStations();
+  const filteredStations = getFilteredStations().sort(
+    (a, b) => getStationDistanceKm(a) - getStationDistanceKm(b)
+  );
   const searchQuery = (document.getElementById("home-search-input")?.value || "")
     .trim()
     .toLowerCase();
@@ -1229,14 +1439,14 @@ function renderHomeDashboard() {
   const topPick = getRecommendedStationRuleBased(filteredStations);
   if (recContainer) {
     if (topPick) {
-      const { station, score, reasons } = topPick;
+      const { station, score, distKm, reasons } = topPick;
       const estimate = computeStationEstimate(station, vehicle);
       recContainer.innerHTML = `
         <div class="rec-card-header">
           <div>
             <span class="rec-badge">Rule-Based Pick (Not AI) • ${score}/100</span>
             <h4 class="rec-title">${station.name}</h4>
-            <p class="rec-specs">${station.distance} km • ${station.connector} • ${station.power} kW • ₹${station.pricePerKwh}/kWh</p>
+            <p class="rec-specs">${distKm} km • ${station.connector} • ${station.power} kW • ₹${station.pricePerKwh}/kWh</p>
           </div>
         </div>
         <ul class="rec-reasons-list">
@@ -1263,17 +1473,18 @@ function renderHomeDashboard() {
 
   const countEl = document.getElementById("home-station-count");
   if (countEl) {
-    countEl.textContent = `${searched.length} of ${allStations.length} sample stations`;
+    countEl.textContent = `${searched.length} of ${allStations.length} stations`;
   }
 
   const listEl = document.getElementById("home-stations-list");
   if (listEl) {
     if (searched.length === 0) {
-      listEl.innerHTML = `<div class="station-card"><p class="rec-specs" style="color:#64748B;margin:0;">No matching sample stations found.</p></div>`;
+      listEl.innerHTML = `<div class="station-card"><p class="rec-specs" style="color:#64748B;margin:0;">No matching stations found.</p></div>`;
     } else {
       listEl.innerHTML = searched
         .map((station) => {
           const availPorts = getAvailablePortCount(station);
+          const distKm = getStationDistanceKm(station);
           return `
             <div class="station-card">
               <div class="station-card-top">
@@ -1281,7 +1492,7 @@ function renderHomeDashboard() {
                 <span class="status-pill ${getStatusClass(station.status)}">${station.status}</span>
               </div>
               <div class="station-meta">
-                <span><i data-lucide="navigation"></i>${station.distance} km</span>
+                <span><i data-lucide="navigation"></i>${distKm} km</span>
                 <span><i data-lucide="plug"></i>${station.connector}</span>
                 <span><i data-lucide="zap"></i>${station.power} kW</span>
                 <span><i data-lucide="indian-rupee"></i>₹${station.pricePerKwh}/kWh</span>
@@ -1326,9 +1537,6 @@ function showScreen(screenId) {
     renderVehicleScreen();
   } else if (screenId === "screen-filters") {
     syncFilterInputsFromState();
-  } else if (screenId === "screen-calculator") {
-    fillCalculatorFromVehicleAndStation();
-    runAndRenderCalculator();
   } else if (screenId === "screen-bookings") {
     renderBookingsScreen();
   } else if (screenId === "screen-profile") {
@@ -1423,7 +1631,8 @@ function handleAuthSubmit(event) {
 }
 
 window.openStationDetails = openStationDetails;
-window.openCalculatorScreen = openCalculatorScreen;
+window.openCalculatorModal = openCalculatorModal;
+window.closeCalculatorModal = closeCalculatorModal;
 window.openSlotBooking = openSlotBooking;
 window.calculateChargingEstimate = calculateChargingEstimate;
 window.updateBookingStatus = updateBookingStatus;
@@ -1440,6 +1649,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   renderIcons();
+  requestLiveGpsLocation(false);
+
+  // Real-time live calculator clock & active session telemetry tick
+  telemetryTimerId = setInterval(() => {
+    const modal = document.getElementById("calculator-modal");
+    if (modal && !modal.classList.contains("hidden")) {
+      runAndRenderCalculator();
+    }
+    const bookingsScreen = document.getElementById("screen-bookings");
+    if (bookingsScreen && bookingsScreen.classList.contains("active")) {
+      renderBookingsScreen();
+    }
+  }, 1000);
 
   // Screen 1: Splash -> Auth
   document.getElementById("btn-get-started")?.addEventListener("click", () => {
@@ -1459,7 +1681,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-home");
   });
 
-  // Screen 3: Home Search & Quick Actions
+  // Screen 3: Home Search, GPS Refresh, Calculator Popup & Quick Actions
   const searchInput = document.getElementById("home-search-input");
   searchInput?.addEventListener("input", renderHomeDashboard);
 
@@ -1468,6 +1690,41 @@ document.addEventListener("DOMContentLoaded", () => {
       searchInput.value = "";
       renderHomeDashboard();
     }
+  });
+
+  document.getElementById("btn-refresh-gps-home")?.addEventListener("click", () => {
+    requestLiveGpsLocation(true);
+  });
+
+  document.getElementById("btn-refresh-gps-explore")?.addEventListener("click", () => {
+    requestLiveGpsLocation(true);
+  });
+
+  document.getElementById("btn-home-calculator")?.addEventListener("click", () => {
+    openCalculatorModal();
+  });
+
+  document.getElementById("btn-close-calculator-modal")?.addEventListener("click", () => {
+    closeCalculatorModal();
+  });
+
+  document.getElementById("calculator-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "calculator-modal") {
+      closeCalculatorModal();
+    }
+  });
+
+  document.getElementById("calc-station-select")?.addEventListener("change", (e) => {
+    syncCalculatorWithStation(e.target.value);
+    runAndRenderCalculator();
+  });
+
+  document.getElementById("btn-calc-sync-ev")?.addEventListener("click", () => {
+    const vehicle = getVehicle();
+    document.getElementById("calc-capacity").value = vehicle.capacity;
+    document.getElementById("calc-current-soc").value = vehicle.currentSoc;
+    document.getElementById("calc-target-soc").value = vehicle.targetSoc;
+    runAndRenderCalculator();
   });
 
   document.getElementById("btn-quick-map")?.addEventListener("click", () => {
@@ -1515,13 +1772,9 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-home");
   });
 
-  // Screen 15: Profile, Calculator Shortcut, Reset & Logout
+  // Screen 15: Profile Reset & Logout (no duplicate calculator button here)
   document.getElementById("btn-back-from-profile")?.addEventListener("click", () => {
     showScreen("screen-home");
-  });
-
-  document.getElementById("btn-open-calculator-from-profile")?.addEventListener("click", () => {
-    openCalculatorScreen();
   });
 
   document.getElementById("btn-reset-sample-stations")?.addEventListener("click", () => {
@@ -1603,11 +1856,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resetStationFilters();
   });
 
-  // Screens 8 & 9: Charging Time & Cost Calculator
-  document.getElementById("btn-back-from-calculator")?.addEventListener("click", () => {
-    showScreen(calcPreviousScreenId || "screen-home");
-  });
-
+  // Live Calculator Modal Input Listeners
   ["calc-capacity", "calc-current-soc", "calc-target-soc", "calc-power", "calc-price"].forEach(
     (id) => {
       document.getElementById(id)?.addEventListener("input", runAndRenderCalculator);
