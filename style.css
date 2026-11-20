@@ -40,7 +40,7 @@ body {
   min-height: 100vh;
 }
 
-/* Mobile-First App Container (Centered like an Android phone on desktop) */
+/* Mobile-First App Container */
 .app-shell {
   width: 100%;
   max-width: 430px;
@@ -78,7 +78,7 @@ body {
   display: none;
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 80px;
+  padding-bottom: 84px;
   animation: fadeIn 0.25s ease-in-out;
 }
 
@@ -168,7 +168,6 @@ body {
   margin-bottom: 36px;
 }
 
-/* Buttons */
 .btn-primary {
   width: 100%;
   background: var(--grad-green-teal);
@@ -193,36 +192,21 @@ body {
 .btn-secondary {
   background: var(--dark-navy);
   color: var(--white);
-  border: none;
-  padding: 12px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 12px 18px;
   border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
-  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .team-credit {
   margin-top: 40px;
   color: #94A3B8;
   font-size: 12px;
-}
-
-/* Phase 1 Placeholder */
-.phase-placeholder {
-  padding: 32px 24px;
-  text-align: center;
-  margin: auto;
-}
-
-.phase-placeholder h2 {
-  color: var(--dark-navy);
-  margin-bottom: 10px;
-}
-
-.phase-placeholder p {
-  color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 /* =========================================
@@ -267,6 +251,7 @@ body {
   color: var(--teal);
   font-weight: 600;
 }
+
 /* =========================================
    SCREEN 2: LOGIN / SIGN UP
    ========================================= */
@@ -372,7 +357,8 @@ body {
   margin-bottom: 6px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid var(--border-grey);
@@ -382,7 +368,8 @@ body {
   outline: none;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: var(--teal);
 }
 
@@ -446,8 +433,9 @@ body {
   margin-top: 2px;
   color: var(--teal);
 }
+
 /* =========================================
-   SCREEN 3: HOME DASHBOARD
+   SCREEN 3 & 10: HOME DASHBOARD + RECOMMENDATION
    ========================================= */
 .home-screen {
   background: var(--light-grey);
@@ -626,25 +614,28 @@ body {
   border-left: 4px solid var(--electric-green);
 }
 
-.rec-top {
+.rec-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 6px;
 }
 
 .rec-title {
   font-size: 16px;
   font-weight: 700;
+  margin-bottom: 4px;
 }
 
 .rec-badge {
+  display: inline-block;
   background: var(--grad-green-teal);
   color: var(--dark-navy);
   font-size: 10px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 999px;
+  margin-bottom: 6px;
 }
 
 .rec-specs {
@@ -653,10 +644,31 @@ body {
   margin-bottom: 8px;
 }
 
-.rec-reason {
+.rec-reasons-list {
+  margin: 8px 0 12px;
+  padding-left: 18px;
   font-size: 12px;
+  color: #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rec-reasons-list li::marker {
   color: var(--electric-green);
-  line-height: 1.4;
+}
+
+.rec-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rec-card-footer strong {
+  color: var(--electric-green);
 }
 
 .station-cards-list {
@@ -693,22 +705,26 @@ body {
   border-radius: 999px;
 }
 
-.status-available {
+.status-available,
+.status-pill--available {
   background: #DCFCE7;
   color: #15803D;
 }
 
-.status-occupied {
+.status-occupied,
+.status-pill--occupied {
   background: #FEE2E2;
   color: #B91C1C;
 }
 
-.status-reserved {
+.status-reserved,
+.status-pill--reserved {
   background: #FEF3C7;
   color: #B45309;
 }
 
-.status-unavailable {
+.status-unavailable,
+.status-pill--unavailable {
   background: #E2E8F0;
   color: #475569;
 }
@@ -733,6 +749,7 @@ body {
   height: 14px;
   color: var(--teal);
 }
+
 /* =========================================
    SCREEN 4: INTERACTIVE MAP (EXPLORE)
    ========================================= */
@@ -872,68 +889,63 @@ body {
   cursor: pointer;
 }
 
-.leaflet-popup-content {
-  margin: 10px 12px;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  line-height: 1.45;
-}
 /* =========================================
    SCREEN 5: STATION DETAILS (#screen-station-details)
    ========================================= */
 #screen-station-details {
-  background: var(--bg-navy, #101D2B);
-  color: var(--text-primary, #F4F8FB);
+  background: var(--dark-navy);
+  color: #F4F8FB;
   padding-bottom: 92px;
 }
 
-.detail-header {
+.detail-header,
+.screen-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(16, 29, 43, 0.95);
+  background: rgba(16, 29, 43, 0.96);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
-.detail-header .screen-title {
+.screen-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 16px;
   font-weight: 600;
+  color: var(--white);
 }
 
-.btn-icon-back {
+.btn-icon-back,
+.btn-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary, #F4F8FB);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #F4F8FB;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
   padding: 7px 12px;
-  font-size: 0.875rem;
+  font-size: 13px;
   cursor: pointer;
 }
 
-.btn-icon-back:hover {
-  border-color: var(--teal, #16A6A0);
-}
-
-.badge-sample-tag {
-  font-size: 0.7rem;
+.badge-sample-tag,
+.sample-badge {
+  font-size: 11px;
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(22, 166, 160, 0.16);
-  color: var(--teal, #16A6A0);
+  background: rgba(22, 166, 160, 0.18);
+  color: var(--teal);
   border: 1px solid rgba(22, 166, 160, 0.35);
 }
 
-.detail-content {
+.detail-content,
+.screen-body {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -942,9 +954,13 @@ body {
 
 .detail-hero-card,
 .detail-estimate-card,
-.detail-ports-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+.detail-ports-card,
+.vehicle-form,
+.filters-form,
+.calculator-form,
+.calculator-results-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 16px;
 }
@@ -958,47 +974,14 @@ body {
 }
 
 .detail-station-name {
-  margin: 0 0 4px;
-  font-size: 1.2rem;
+  font-size: 18px;
   font-weight: 700;
+  margin-bottom: 4px;
 }
 
 .detail-station-address {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted, #9FB0C3);
-}
-
-.status-pill {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.status-pill--available {
-  background: rgba(22, 199, 132, 0.16);
-  color: var(--green, #16C784);
-  border: 1px solid rgba(22, 199, 132, 0.4);
-}
-
-.status-pill--occupied {
-  background: rgba(239, 68, 68, 0.16);
-  color: #F87171;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-}
-
-.status-pill--reserved {
-  background: rgba(245, 158, 11, 0.16);
-  color: #FBBF24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-}
-
-.status-pill--unavailable {
-  background: rgba(148, 163, 184, 0.16);
-  color: #CBD5E1;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 13px;
+  color: #9FB0C3;
 }
 
 .detail-meta-grid {
@@ -1009,8 +992,8 @@ body {
 }
 
 .meta-box {
-  background: rgba(16, 29, 43, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(16, 29, 43, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 10px 12px;
   display: flex;
@@ -1019,19 +1002,19 @@ body {
 }
 
 .meta-label {
-  font-size: 0.72rem;
-  color: var(--text-muted, #9FB0C3);
+  font-size: 11px;
+  color: #9FB0C3;
 }
 
 .meta-value {
-  font-size: 0.95rem;
+  font-size: 14px;
   font-weight: 600;
 }
 
-.detail-connectors-text {
-  margin: 0;
-  font-size: 0.84rem;
-  color: var(--text-muted, #9FB0C3);
+.detail-connectors-text,
+.muted-text {
+  font-size: 12px;
+  color: #9FB0C3;
 }
 
 .card-header-row {
@@ -1043,45 +1026,43 @@ body {
 }
 
 .section-heading {
-  margin: 0;
-  font-size: 0.98rem;
+  font-size: 15px;
   font-weight: 600;
 }
 
-.muted-text {
-  font-size: 0.78rem;
-  color: var(--text-muted, #9FB0C3);
-}
-
-.estimate-summary-row {
+.estimate-summary-row,
+.calc-results-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  background: rgba(16, 29, 43, 0.65);
+  background: rgba(16, 29, 43, 0.75);
   border-radius: 12px;
   padding: 12px;
 }
 
-.estimate-summary-row > div {
+.estimate-summary-row > div,
+.calc-result-box {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.estimate-val {
-  font-size: 0.95rem;
+.estimate-val,
+.calc-result-box strong {
+  font-size: 14px;
   font-weight: 700;
 }
 
 .highlight-green {
-  color: var(--green, #16C784);
+  color: var(--electric-green);
 }
 
-.disclaimer-note {
-  margin: 10px 0 0;
-  font-size: 0.72rem;
+.disclaimer-note,
+.disclaimer-text {
+  margin-top: 10px;
+  font-size: 11px;
   line-height: 1.4;
-  color: var(--text-muted, #9FB0C3);
+  color: #9FB0C3;
 }
 
 .ports-list {
@@ -1097,31 +1078,25 @@ body {
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: rgba(16, 29, 43, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(16, 29, 43, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .port-item-title {
-  margin: 0 0 3px;
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 600;
+  margin-bottom: 3px;
 }
 
 .port-item-sub {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-muted, #9FB0C3);
+  font-size: 12px;
+  color: #9FB0C3;
 }
 
 .detail-action-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 16px;
-  background: linear-gradient(180deg, rgba(16, 29, 43, 0.85), rgba(16, 29, 43, 0.98));
+  padding: 12px 16px 20px;
+  background: var(--dark-navy);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  z-index: 15;
 }
 
 .btn-primary-action {
@@ -1133,10 +1108,10 @@ body {
   padding: 13px 18px;
   border: none;
   border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #08121C;
-  background: linear-gradient(135deg, var(--green, #16C784), var(--teal, #16A6A0));
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark-navy);
+  background: var(--grad-green-teal);
   cursor: pointer;
 }
 
@@ -1144,341 +1119,65 @@ body {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
 /* =========================================
-   SCREEN 10: RULE-BASED RECOMMENDATION CARD
-   ========================================= */
-#home-recommended-card {
-  background: linear-gradient(
-    145deg,
-    rgba(22, 166, 160, 0.14),
-    rgba(16, 29, 43, 0.92)
-  );
-  border: 1px solid rgba(22, 199, 132, 0.35);
-  border-radius: 16px;
-  padding: 16px;
-  color: var(--text-primary, #F4F8FB);
-}
-
-.rec-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.rec-badge {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 4px 10px;
-  border-radius: 999px;
-  color: #08121C;
-  background: linear-gradient(
-    135deg,
-    var(--green, #16C784),
-    var(--teal, #16A6A0)
-  );
-  margin-bottom: 8px;
-}
-
-.rec-title {
-  margin: 0 0 4px;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-primary, #F4F8FB);
-}
-
-.rec-reasons-list {
-  margin: 10px 0 14px;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 0.84rem;
-  color: var(--text-primary, #F4F8FB);
-}
-
-.rec-reasons-list li::marker {
-  color: var(--green, #16C784);
-}
-
-.rec-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
-  flex-wrap: wrap;
-}
-
-.rec-card-footer strong {
-  color: var(--green, #16C784);
-}
-/* =========================================
-   SCREENS 6, 8 & 9: EV PROFILE & CHARGING CALCULATORS
+   SCREENS 6, 7, 8 & 9: VEHICLE, FILTERS & CALCULATOR
    ========================================= */
 #screen-vehicle,
+#screen-filters,
 #screen-calculator {
-  background: var(--bg-navy, #101D2B);
-  color: var(--text-primary, #F4F8FB);
-  padding-bottom: 84px;
+  background: var(--dark-navy);
+  color: #F4F8FB;
 }
 
-.vehicle-card,
-.calc-card,
-.calc-result-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 14px;
+#screen-vehicle label,
+#screen-filters label,
+#screen-calculator label {
+  color: #CBD5E1;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
+#screen-vehicle input,
+#screen-vehicle select,
+#screen-filters input,
+#screen-filters select,
+#screen-calculator input,
+#screen-calculator select {
+  background: rgba(16, 29, 43, 0.9);
+  color: var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
-.form-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted, #9FB0C3);
-}
-
-.form-input,
-.form-select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(16, 29, 43, 0.85);
-  color: var(--text-primary, #F4F8FB);
-  font-size: 0.9rem;
-  outline: none;
-}
-
-.form-input:focus,
-.form-select:focus {
-  border-color: var(--green, #16C784);
-}
-
-.form-grid-2 {
+.form-row-two {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
-.calc-output-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.calc-metric-box {
-  background: rgba(16, 29, 43, 0.72);
-  border: 1px solid rgba(22, 166, 160, 0.25);
-  border-radius: 12px;
-  padding: 10px;
+.checkbox-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
 }
 
-.calc-metric-label {
-  font-size: 0.72rem;
-  color: var(--text-muted, #9FB0C3);
+.checkbox-group input[type="checkbox"] {
+  width: auto;
 }
 
-.calc-metric-value {
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--green, #16C784);
+.checkbox-group label {
+  margin-bottom: 0;
 }
 
-.btn-save-secondary {
-  width: 100%;
-  padding: 11px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(22, 166, 160, 0.45);
-  background: rgba(22, 166, 160, 0.14);
-  color: var(--text-primary, #F4F8FB);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-save-secondary:hover {
-  border-color: var(--green, #16C784);
-}
-
-.form-feedback-msg {
+.filter-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
   margin-top: 8px;
-  font-size: 0.8rem;
-  color: var(--green, #16C784);
 }
 
+.form-status-msg,
 .form-error-msg {
-  margin-top: 8px;
-  font-size: 0.8rem;
+  font-size: 12px;
+  min-height: 16px;
+  margin-bottom: 8px;
   color: #F87171;
 }
-/* =========================================
-   SCREENS 7, 11, 12 & 13: FILTERS, SLOT BOOKING & ADVANCE PAYMENT
-   ========================================= */
-.filters-bar-card,
-.booking-card,
-.payment-breakdown-card,
-.confirmation-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 14px;
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.filters-actions-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.btn-reset-filters {
-  padding: 9px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-primary, #F4F8FB);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-reset-filters:hover {
-  border-color: var(--teal, #16A6A0);
-}
-
-.slots-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.slot-pill-btn {
-  padding: 9px 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(16, 29, 43, 0.75);
-  color: var(--text-primary, #F4F8FB);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-}
-
-.slot-pill-btn.active,
-.slot-pill-btn[aria-pressed="true"] {
-  background: rgba(22, 199, 132, 0.18);
-  border-color: var(--green, #16C784);
-  color: var(--green, #16C784);
-}
-
-.slot-pill-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.payment-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.86rem;
-}
-
-.payment-row:last-child {
-  border-bottom: none;
-}
-
-.payment-row--highlight strong {
-  color: var(--green, #16C784);
-  font-size: 1rem;
-}
-
-.confirmation-card {
-  border-color: rgba(22, 199, 132, 0.45);
-  background: linear-gradient(
-    145deg,
-    rgba(22, 199, 132, 0.12),
-    rgba(16, 29, 43, 0.94)
-  );
-}
-
-.booking-id-badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(22, 166, 160, 0.2);
-  color: var(--teal, #16A6A0);
-  border: 1px solid rgba(22, 166, 160, 0.4);
-  margin-bottom: 8px;
-}/* =========================================
-   SCREENS 14 & 15: BOOKINGS HISTORY & USER PROFILE
-   ========================================= */
-#screen-bookings,
-#screen-profile {
-  background: var(--bg-navy, #101D2B);
-  color: var(--text-primary, #F4F8FB);
-  padding-bottom: 88px;
-}
-
-.bookings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.booking-history-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  padding: 15px;
-}
-
-.booking-history-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.booking-station-title {
-  margin: 0 0 3px;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.booking-meta-text {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--text-muted, #9FB0C
-             
