@@ -26,7 +26,7 @@
 
     <!-- Top Prototype Disclaimer Banner -->
     <div class="demo-banner">
-      <span>⚡ Student Prototype (Simulated Data) • Team EVenture</span>
+      <span>⚡ GoEV Prototype • Live GPS + Dynamic LocalStorage • Team EVenture</span>
     </div>
 
     <!-- SCREEN 1: SPLASH SCREEN -->
@@ -64,7 +64,7 @@
             <p class="auth-tagline">Find. Charge. Go.</p>
           </div>
         </div>
-        <p class="auth-subtitle">Sign in or create a prototype account to find chargers and book slots.</p>
+        <p class="auth-subtitle">Sign in or create an account to find chargers and book slots.</p>
       </div>
 
       <div class="auth-card">
@@ -106,7 +106,7 @@
         <div class="auth-note">
           <i data-lucide="info"></i>
           <small>
-            <strong>Prototype Auth Notice:</strong> Uses local browser storage for demonstration only—not production-grade security or real encrypted authentication.
+            <strong>Storage Notice:</strong> Account, EV profile, station state, and bookings persist locally in browser LocalStorage.
           </small>
         </div>
       </div>
@@ -120,12 +120,15 @@
             <p class="home-welcome-label">Welcome to GoEV</p>
             <h2 id="home-user-name" class="home-user-title">EV Driver</h2>
           </div>
-          <span class="badge-sample">Sample Data</span>
+          <span class="badge-sample">Live GPS</span>
         </div>
 
-        <div class="location-pill">
-          <i data-lucide="map-pin"></i>
-          <span>Sample Area: Pimpri-Chinchwad Demo Zone (Not Live GPS)</span>
+        <div class="gps-row">
+          <div class="location-pill">
+            <i data-lucide="map-pin"></i>
+            <span id="home-gps-label">Acquiring live GPS...</span>
+          </div>
+          <button type="button" id="btn-refresh-gps-home" class="btn-gps-refresh">Locate</button>
         </div>
 
         <div class="home-search-box">
@@ -142,18 +145,23 @@
       </div>
 
       <div class="home-body">
+        <!-- 4 Unique Quick Actions on Home (Calculator Popup is right here) -->
         <div class="quick-actions-grid">
           <button type="button" id="btn-quick-map" class="quick-action-btn">
             <div class="qa-icon teal-bg"><i data-lucide="map"></i></div>
-            <span>Explore Map</span>
+            <span>Map</span>
+          </button>
+          <button type="button" id="btn-home-calculator" class="quick-action-btn">
+            <div class="qa-icon amber-bg"><i data-lucide="calculator"></i></div>
+            <span>Calculator</span>
           </button>
           <button type="button" id="btn-quick-vehicle" class="quick-action-btn">
             <div class="qa-icon navy-bg"><i data-lucide="car"></i></div>
-            <span>My Vehicle</span>
+            <span>My EV</span>
           </button>
           <button type="button" id="btn-quick-bookings" class="quick-action-btn">
             <div class="qa-icon green-bg"><i data-lucide="calendar-check"></i></div>
-            <span>My Bookings</span>
+            <span>Bookings</span>
           </button>
         </div>
 
@@ -180,9 +188,12 @@
       <div class="subscreen-header">
         <div>
           <h2>Explore Stations</h2>
-          <p class="subscreen-subtitle">Fictional sample markers • Not live GPS</p>
+          <p id="explore-gps-subtitle" class="subscreen-subtitle">Acquiring live GPS...</p>
         </div>
-        <button type="button" id="btn-open-filters" class="btn-sm-teal">Filters</button>
+        <div class="header-actions-inline">
+          <button type="button" id="btn-refresh-gps-explore" class="btn-gps-refresh">GPS</button>
+          <button type="button" id="btn-open-filters" class="btn-sm-teal">Filters</button>
+        </div>
       </div>
 
       <div class="map-legend">
@@ -196,14 +207,14 @@
         <div id="goev-map" class="goev-map"></div>
         <div id="map-fallback-box" class="map-fallback-box hidden">
           <div class="fallback-title">Offline / Fallback Sample Map Grid</div>
-          <p class="fallback-desc">Map tiles require internet access. Use the interactive sample station pins or list below.</p>
+          <p class="fallback-desc">Map tiles require internet access. Use the interactive station pins or list below.</p>
           <div id="fallback-pins" class="fallback-pins"></div>
         </div>
       </div>
 
       <div class="explore-list-section">
         <div class="section-heading-row">
-          <h3>Sample Stations List</h3>
+          <h3>Nearby Stations by Distance</h3>
           <small id="explore-station-count" class="muted-count">8 stations</small>
         </div>
         <div id="explore-stations-list" class="station-cards-list"></div>
@@ -218,7 +229,7 @@
           <span>Back</span>
         </button>
         <h2 class="screen-title">Station Details</h2>
-        <span class="badge-sample-tag">Sample Data</span>
+        <span class="badge-sample-tag">Live Dist.</span>
       </header>
 
       <div class="detail-content">
@@ -233,7 +244,7 @@
 
           <div class="detail-meta-grid">
             <div class="meta-box">
-              <span class="meta-label">Distance (Sample)</span>
+              <span class="meta-label">Distance</span>
               <strong id="detail-station-distance" class="meta-value">-- km</strong>
             </div>
             <div class="meta-box">
@@ -245,7 +256,7 @@
               <strong id="detail-station-power" class="meta-value">-- kW</strong>
             </div>
             <div class="meta-box">
-              <span class="meta-label">Tariff (Sample)</span>
+              <span class="meta-label">Tariff</span>
               <strong id="detail-station-price" class="meta-value">₹-- / kWh</strong>
             </div>
           </div>
@@ -271,12 +282,12 @@
               <strong id="detail-est-time" class="estimate-val">-- hrs</strong>
             </div>
             <div>
-              <span class="muted-text">Est. Cost (Sample Rate)</span>
+              <span class="muted-text">Est. Cost</span>
               <strong id="detail-est-cost" class="estimate-val highlight-green">₹--</strong>
             </div>
           </div>
           <p class="disclaimer-note">
-            * Estimates use your saved EV profile and sample tariff rates. Actual charging time varies due to battery charging curves.
+            * Estimates use your saved EV profile and station tariff rates. Actual charging time varies due to battery charging curves.
           </p>
         </article>
 
@@ -305,7 +316,7 @@
           <span>Back</span>
         </button>
         <h2 class="screen-title">Book Charging Slot</h2>
-        <span class="sample-badge">Simulated</span>
+        <span class="sample-badge">20% Adv.</span>
       </header>
 
       <div class="screen-body">
@@ -326,7 +337,7 @@
           </div>
 
           <div class="form-group">
-            <label>Select Time Slot (Sample)</label>
+            <label>Select Time Slot</label>
             <div id="booking-slots-list" class="slots-grid"></div>
           </div>
         </article>
@@ -363,7 +374,7 @@
           </button>
 
           <p class="disclaimer-text">
-            Simulation Notice: No real payment or gateway transaction occurs. Clicking Simulate marks the selected port Reserved in LocalStorage and saves a sample booking record.
+            Simulation Notice: No real payment or gateway transaction occurs. Confirming marks the selected port Reserved in LocalStorage and records the booking.
           </p>
         </article>
 
@@ -381,7 +392,7 @@
       </div>
     </section>
 
-    <!-- SCREEN 14: BOOKINGS HISTORY & MANAGEMENT -->
+    <!-- SCREEN 14: BOOKINGS HISTORY & LIVE TELEMETRY -->
     <section id="screen-bookings" class="screen" aria-label="My Bookings History">
       <header class="screen-header">
         <button type="button" id="btn-back-from-bookings" class="btn-back" aria-label="Back">
@@ -405,7 +416,7 @@
           <span>Back</span>
         </button>
         <h2 class="screen-title">Driver Profile</h2>
-        <span class="sample-badge">LocalStorage</span>
+        <span class="sample-badge">Account</span>
       </header>
 
       <div class="screen-body">
@@ -427,25 +438,20 @@
               <strong id="profile-bookings-count" class="meta-value">0 recorded</strong>
             </div>
             <div class="meta-box">
-              <span class="meta-label">Data Mode</span>
+              <span class="meta-label">Persistence</span>
               <strong class="meta-value highlight-green">LocalStorage</strong>
             </div>
           </div>
         </article>
 
         <article class="profile-card">
-          <h4 class="section-heading">Tools &amp; Prototype Controls</h4>
+          <h4 class="section-heading">Session &amp; Station Data Controls</h4>
           <p id="profile-action-msg" class="form-status-msg"></p>
 
           <div class="profile-stack">
-            <button type="button" id="btn-open-calculator-from-profile" class="btn-primary">
-              <i data-lucide="calculator"></i>
-              <span>Open Charge Time &amp; Cost Calculator</span>
-            </button>
-
             <button type="button" id="btn-reset-sample-stations" class="btn-secondary">
               <i data-lucide="rotate-ccw"></i>
-              <span>Reset Sample Stations &amp; Filters</span>
+              <span>Reset Stations &amp; Filters</span>
             </button>
 
             <button type="button" id="btn-logout-driver" class="btn-danger-ghost" style="padding:12px;">
@@ -553,21 +559,21 @@
           <span>Back</span>
         </button>
         <h2 class="screen-title">Filter Stations</h2>
-        <span class="sample-badge">Sample Data</span>
+        <span class="sample-badge">Live Filter</span>
       </header>
 
       <div class="screen-body">
         <form id="filters-form" class="filters-form">
           <div class="form-group">
-            <label for="filter-distance">Max Distance (km, Sample)</label>
+            <label for="filter-distance">Max Distance (km)</label>
             <input
               type="number"
               id="filter-distance"
               name="maxDistance"
               min="1"
-              max="100"
+              max="200"
               step="0.5"
-              placeholder="e.g., 10"
+              placeholder="e.g., 15"
             />
           </div>
 
@@ -594,7 +600,7 @@
           </div>
 
           <div class="form-group">
-            <label for="filter-max-price">Max Price per kWh (₹, Sample)</label>
+            <label for="filter-max-price">Max Price per kWh (₹)</label>
             <input
               type="number"
               id="filter-max-price"
@@ -614,31 +620,42 @@
           <div class="filter-actions-row">
             <button type="button" id="btn-reset-filters" class="btn-secondary">
               <i data-lucide="rotate-ccw"></i>
-              <span>Reset Filters</span>
+              <span>Reset</span>
             </button>
 
             <button type="button" id="btn-apply-filters" class="btn-primary">
               <i data-lucide="sliders-horizontal"></i>
-              <span>Apply Filters</span>
+              <span>Apply</span>
             </button>
           </div>
         </form>
       </div>
     </section>
 
-    <!-- SCREENS 8 & 9: CHARGING TIME & COST CALCULATOR -->
-    <section id="screen-calculator" class="screen" aria-label="Charging Time and Cost Calculator">
-      <header class="screen-header">
-        <button type="button" id="btn-back-from-calculator" class="btn-back" aria-label="Back">
-          <i data-lucide="arrow-left"></i>
-          <span>Back</span>
-        </button>
-        <h2 class="screen-title">Charge Calculator</h2>
-        <span class="sample-badge">Est. Tool</span>
-      </header>
+    <!-- REAL-TIME CHARGE CALCULATOR POPUP MODAL (TRIGGERED FROM HOME) -->
+    <div id="calculator-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Real-Time Charge Calculator">
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <div>
+            <h3 class="screen-title">Live Charge Calculator</h3>
+            <p class="subscreen-subtitle">Instant time, kWh &amp; tariff calculator</p>
+          </div>
+          <button type="button" id="btn-close-calculator-modal" class="modal-close-btn" aria-label="Close Calculator">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
 
-      <div class="screen-body">
-        <form id="calculator-form" class="calculator-form" novalidate>
+        <div class="live-telemetry-bar">
+          <span id="calc-live-clock-out">Live @ --:--:--</span>
+          <button type="button" id="btn-calc-sync-ev" class="btn-sync-pill">Sync My EV</button>
+        </div>
+
+        <form id="calculator-form" novalidate>
+          <div class="form-group">
+            <label for="calc-station-select">Station Power &amp; Tariff Preset</label>
+            <select id="calc-station-select"></select>
+          </div>
+
           <div class="form-group">
             <label for="calc-capacity">Battery Capacity (kWh)</label>
             <input
@@ -648,7 +665,6 @@
               min="1"
               max="300"
               step="0.1"
-              placeholder="e.g., 40"
               required
             />
           </div>
@@ -663,7 +679,6 @@
                 min="0"
                 max="100"
                 step="1"
-                placeholder="e.g., 30"
                 required
               />
             </div>
@@ -677,7 +692,6 @@
                 min="1"
                 max="100"
                 step="1"
-                placeholder="e.g., 80"
                 required
               />
             </div>
@@ -693,13 +707,12 @@
                 min="0.5"
                 max="500"
                 step="0.5"
-                placeholder="e.g., 30"
                 required
               />
             </div>
 
             <div class="form-group">
-              <label for="calc-price">Price per kWh (₹, Sample)</label>
+              <label for="calc-price">Price per kWh (₹)</label>
               <input
                 type="number"
                 id="calc-price"
@@ -707,7 +720,6 @@
                 min="0"
                 max="100"
                 step="0.5"
-                placeholder="e.g., 15"
                 required
               />
             </div>
@@ -717,31 +729,29 @@
         </form>
 
         <div class="calculator-results-card">
-          <h4>Estimated Results</h4>
-
           <div class="calc-results-grid">
             <div class="calc-result-box">
-              <span class="meta-label">Energy Required</span>
+              <span class="meta-label">Energy Needed</span>
               <strong id="calc-energy-out">-- kWh</strong>
             </div>
 
             <div class="calc-result-box">
-              <span class="meta-label">Estimated Time</span>
+              <span class="meta-label">Est. Time</span>
               <strong id="calc-time-out">-- hrs</strong>
             </div>
 
             <div class="calc-result-box">
-              <span class="meta-label">Estimated Cost</span>
-              <strong id="calc-cost-out">₹--</strong>
+              <span class="meta-label">Est. Cost</span>
+              <strong id="calc-cost-out" class="highlight-green">₹--</strong>
             </div>
           </div>
 
           <p class="disclaimer-text">
-            Disclaimer: Calculations use ideal linear math and sample tariff rates. Real-world charging slows down near higher state-of-charge levels due to the battery charging curve, temperature, and station power sharing.
+            Note: Uses linear energy/tariff math; real-world DC charging tapers above 80% SoC due to battery management curves.
           </p>
         </div>
       </div>
-    </section>
+    </div>
 
     <!-- BOTTOM NAVIGATION BAR -->
     <nav id="bottom-nav" class="bottom-nav hidden">
@@ -755,7 +765,7 @@
       </button>
       <button type="button" class="nav-item" data-target="screen-vehicle">
         <i data-lucide="car"></i>
-        <span>My Vehicle</span>
+        <span>My EV</span>
       </button>
       <button type="button" class="nav-item" data-target="screen-bookings">
         <i data-lucide="calendar-check"></i>
