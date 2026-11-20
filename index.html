@@ -406,6 +406,8 @@
     </section>
 
     <!-- 6. VEHICLE PROFILE SCREEN -->
+    
+    <!-- 6. VEHICLE PROFILE SCREEN (PER-ACCOUNT SAVED GARAGE + WORKING BUTTONS) -->
     <section id="screen-vehicle" class="screen dark-surface-screen" aria-label="Vehicle Profile">
       <header class="screen-header">
         <button type="button" id="btn-back-from-vehicle" class="btn-back" aria-label="Back">
@@ -413,11 +415,46 @@
           <span>Back</span>
         </button>
         <h2 class="screen-title">My Vehicle</h2>
-        <span class="badge-live">EV SPEC</span>
+        <span id="vehicle-account-badge" class="badge-live">ACCOUNT EV</span>
       </header>
 
       <div class="screen-body">
+        <!-- Active Vehicle Banner -->
+        <article class="surface-card">
+          <div class="detail-top-row" style="margin-bottom:6px;">
+            <div>
+              <span class="meta-label">Active EV Linked to Account</span>
+              <h3 id="vehicle-active-title" class="card-title-lg">Tata Nexon EV</h3>
+              <p id="vehicle-active-owner" class="card-subtitle">Account: demo@goev.app</p>
+            </div>
+            <span id="vehicle-active-connector-pill" class="status-pill status-pill--available">CCS2</span>
+          </div>
+          <p id="vehicle-active-specs" class="card-subtitle">40 kWh • Charge 30% → 80% (20.0 kWh needed)</p>
+        </article>
+
+        <!-- One-Tap EV Model Presets -->
+        <article class="surface-card">
+          <div class="card-header-row" style="margin-bottom:8px;">
+            <h4 class="section-heading-light">Quick Fill Popular EVs</h4>
+            <span class="card-subtitle">Tap to prefill</span>
+          </div>
+          <div id="vehicle-presets-row" class="slots-grid">
+            <button type="button" class="slot-pill-btn" data-preset-name="Tata Nexon EV" data-preset-cap="40.5" data-preset-conn="CCS2">Tata Nexon EV (40.5 kWh)</button>
+            <button type="button" class="slot-pill-btn" data-preset-name="MG ZS EV" data-preset-cap="50.3" data-preset-conn="CCS2">MG ZS EV (50.3 kWh)</button>
+            <button type="button" class="slot-pill-btn" data-preset-name="Mahindra XUV400" data-preset-cap="39.4" data-preset-conn="CCS2">Mahindra XUV400 (39.4 kWh)</button>
+            <button type="button" class="slot-pill-btn" data-preset-name="Tata Tiago EV" data-preset-cap="24" data-preset-conn="CCS2">Tata Tiago EV (24 kWh)</button>
+          </div>
+        </article>
+
+        <!-- Add / Edit Vehicle Form -->
         <form id="vehicle-form" class="surface-card" novalidate>
+          <div class="card-header-row">
+            <h4 id="vehicle-form-heading" class="section-heading-light">Add / Update Vehicle</h4>
+            <button type="button" id="btn-vehicle-new-mode" class="btn-sync-pill">+ New EV</button>
+          </div>
+
+          <input type="hidden" id="vehicle-edit-id" value="" />
+
           <div class="form-group">
             <label for="vehicle-name">Vehicle Model</label>
             <input
@@ -426,6 +463,16 @@
               name="vehicleName"
               placeholder="e.g., Tata Nexon EV"
               required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="vehicle-reg-number">Registration / Plate (Optional)</label>
+            <input
+              type="text"
+              id="vehicle-reg-number"
+              name="vehicleReg"
+              placeholder="e.g., MH 14 EV 2026"
             />
           </div>
 
@@ -451,7 +498,7 @@
                 id="vehicle-current-soc"
                 name="currentSoc"
                 min="0"
-                max="100"
+                max="99"
                 step="1"
                 placeholder="e.g., 30"
                 required
@@ -486,11 +533,20 @@
 
           <p id="vehicle-status-msg" class="form-status-msg" aria-live="polite"></p>
 
-          <button type="submit" id="btn-save-vehicle" class="btn-primary">
+          <button type="button" id="btn-save-vehicle" class="btn-primary">
             <i data-lucide="save"></i>
-            <span>Save Vehicle Profile</span>
+            <span>Save Vehicle to Account</span>
           </button>
         </form>
+
+        <!-- Saved Vehicles Stored in User Account -->
+        <article class="surface-card">
+          <div class="card-header-row">
+            <h4 class="section-heading-light">Saved Vehicles in Account</h4>
+            <span id="vehicle-garage-count" class="card-subtitle">0 saved</span>
+          </div>
+          <div id="vehicle-garage-list" class="ports-list"></div>
+        </article>
       </div>
     </section>
 
