@@ -373,7 +373,85 @@
           <h4 id="conf-station-name" class="detail-station-name">Confirmed Station</h4>
           <p id="conf-port-slot" class="muted-text" style="margin-bottom:6px;"></p>
           <p id="conf-vehicle-info" class="muted-text" style="margin-bottom:8px;"></p>
-          <p id="conf-payment-summary" class="highlight-green" style="font-size:12px;font-weight:600;"></p>
+          <p id="conf-payment-summary" class="highlight-green" style="font-size:12px;font-weight:600;margin-bottom:12px;"></p>
+          <button type="button" id="btn-conf-view-bookings" class="btn-secondary" style="width:100%;">
+            <span>View in My Bookings</span>
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <!-- SCREEN 14: BOOKINGS HISTORY & MANAGEMENT -->
+    <section id="screen-bookings" class="screen" aria-label="My Bookings History">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-bookings" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">My Bookings</h2>
+        <span id="bookings-count-label" class="sample-badge">0 bookings</span>
+      </header>
+
+      <div class="screen-body">
+        <div id="bookings-history-list" class="station-cards-list"></div>
+      </div>
+    </section>
+
+    <!-- SCREEN 15: DRIVER PROFILE & DATA CONTROLS -->
+    <section id="screen-profile" class="screen" aria-label="Driver Profile and Settings">
+      <header class="screen-header">
+        <button type="button" id="btn-back-from-profile" class="btn-back" aria-label="Back">
+          <i data-lucide="arrow-left"></i>
+          <span>Back</span>
+        </button>
+        <h2 class="screen-title">Driver Profile</h2>
+        <span class="sample-badge">LocalStorage</span>
+      </header>
+
+      <div class="screen-body">
+        <article class="profile-card">
+          <h3 id="profile-driver-name" class="detail-station-name">EV Driver</h3>
+          <p id="profile-driver-email" class="muted-text" style="margin-bottom:12px;">demo@goev.app</p>
+
+          <div class="detail-meta-grid" style="margin-bottom:0;">
+            <div class="meta-box">
+              <span class="meta-label">Saved EV</span>
+              <strong id="profile-vehicle-summary" class="meta-value">Tata Nexon EV</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Charge Target</span>
+              <strong id="profile-soc-summary" class="meta-value">30% → 80%</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Bookings</span>
+              <strong id="profile-bookings-count" class="meta-value">0 recorded</strong>
+            </div>
+            <div class="meta-box">
+              <span class="meta-label">Data Mode</span>
+              <strong class="meta-value highlight-green">LocalStorage</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="profile-card">
+          <h4 class="section-heading">Tools &amp; Prototype Controls</h4>
+          <p id="profile-action-msg" class="form-status-msg"></p>
+
+          <div class="profile-stack">
+            <button type="button" id="btn-open-calculator-from-profile" class="btn-primary">
+              <i data-lucide="calculator"></i>
+              <span>Open Charge Time &amp; Cost Calculator</span>
+            </button>
+
+            <button type="button" id="btn-reset-sample-stations" class="btn-secondary">
+              <i data-lucide="rotate-ccw"></i>
+              <span>Reset Sample Stations &amp; Filters</span>
+            </button>
+
+            <button type="button" id="btn-logout-driver" class="btn-danger-ghost" style="padding:12px;">
+              <span>Logout Session</span>
+            </button>
+          </div>
         </article>
       </div>
     </section>
