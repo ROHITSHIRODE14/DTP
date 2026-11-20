@@ -1,12 +1,13 @@
 // =========================================
-// GoEV CORE APPLICATION LOGIC (SCREENS 1–15)
-// Real-Time GPS + Live Calculator Modal + Telemetry
+// GoEV APPLICATION LOGIC — TEAM EVENTURE
+// Live GPS + Map Preview + Live Calculator Modal + Checkout
 // =========================================
 
 let isSignupMode = false;
 let goevMap = null;
+let goevHomePreviewMap = null;
 let mapMarkersLayer = null;
-let userLocationMarker = null;
+let previewMarkersLayer = null;
 let selectedStationId = null;
 let previousScreenId = "screen-home";
 let vehiclePreviousScreenId = "screen-home";
@@ -15,7 +16,7 @@ let bookingPreviousScreenId = "screen-station-details";
 let selectedBookingPortId = null;
 let selectedBookingSlot = "10:30 AM - 11:30 AM";
 
-// Real-time GPS state (defaults to Pimpri-Chinchwad reference if GPS is off/denied)
+// Live GPS state with Pimpri-Chinchwad fallback
 const FALLBACK_COORDS = { lat: 18.6298, lng: 73.7997 };
 let liveCoords = { ...FALLBACK_COORDS, accuracy: null, isLiveGps: false };
 let gpsWatchId = null;
@@ -164,24 +165,23 @@ function getStationDistanceKm(station) {
 function updateGpsStatusBadges(statusText, isLive) {
   const homeLocEl = document.getElementById("home-gps-label");
   const exploreSubEl = document.getElementById("explore-gps-subtitle");
-  if (homeLocEl) {
-    homeLocEl.textContent = statusText;
-  }
+  if (homeLocEl) homeLocEl.textContent = statusText;
   if (exploreSubEl) {
     exploreSubEl.textContent = isLive
       ? `${statusText} • Live pins`
-      : `${statusText} • Fallback pins`;
+      : `${statusText} • Reference pins`;
   }
 }
 
 function requestLiveGpsLocation(centerMapOnFix = false) {
   if (!navigator.geolocation) {
     liveCoords = { ...FALLBACK_COORDS, accuracy: null, isLiveGps: false };
-    updateGpsStatusBadges("GPS unsupported • Using Pimpri-Chinchwad", false);
+    updateGpsStatusBadges("GPS unavailable • Pimpri-Chinchwad", false);
+    refreshActiveViews();
     return;
   }
 
-  updateGpsStatusBadges("Acquiring live GPS...", false);
+  updateGpsStatusBadges("Locating via GPS...", false);
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -192,18 +192,20 @@ function requestLiveGpsLocation(centerMapOnFix = false) {
         isLiveGps: true
       };
       updateGpsStatusBadges(
-        `Live GPS (${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)} • ±${liveCoords.accuracy}m)`,
+        `GPS ${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)} (±${liveCoords.accuracy}m)`,
         true
       );
       if (goevMap && centerMapOnFix) {
         goevMap.setView([liveCoords.lat, liveCoords.lng], 13);
       }
+      if (goevHomePreviewMap && centerMapOnFix) {
+        goevHomePreviewMap.setView([liveCoords.lat, liveCoords.lng], 12);
+      }
       refreshActiveViews();
     },
-    (err) => {
-      console.warn("Geolocation fallback:", err.message);
+    () => {
       liveCoords = { ...FALLBACK_COORDS, accuracy: null, isLiveGps: false };
-      updateGpsStatusBadges("GPS off/denied • Using Pimpri-Chinchwad", false);
+      updateGpsStatusBadges("GPS off • Pimpri-Chinchwad", false);
       refreshActiveViews();
     },
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }
@@ -219,7 +221,7 @@ function requestLiveGpsLocation(centerMapOnFix = false) {
           isLiveGps: true
         };
         updateGpsStatusBadges(
-          `Live GPS (${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)} • ±${liveCoords.accuracy}m)`,
+          `GPS ${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)} (±${liveCoords.accuracy}m)`,
           true
         );
         refreshActiveViews();
@@ -313,9 +315,9 @@ function releaseReservedPort(stationId, portId) {
 function getMarkerColor(status) {
   const normalized = normalizePortStatus(status).toLowerCase();
   if (normalized === "available") return "#16C784";
-  if (normalized === "occupied") return "#EF5350";
-  if (normalized === "reserved") return "#FFAA45";
-  return "#64748B";
+  if (normalized === "occupied") return "#E45B64";
+  if (normalized === "reserved") return "#F4A340";
+  return "#82919B";
 }
 
 function getStationConnectorsList(station) {
@@ -323,16 +325,14 @@ function getStationConnectorsList(station) {
     return station.connectors.map((c) => String(c).trim());
   }
   if (Array.isArray(station.ports) && station.ports.length > 0) {
-    const fromPorts = station.ports
-      .map((p) => p.connector || p.type)
-      .filter(Boolean);
+    const fromPorts = station.ports.map((p) => p.connector || p.type).filter(Boolean);
     if (fromPorts.length > 0) return [...new Set(fromPorts)];
   }
   return station.connector ? [String(station.connector).trim()] : ["CCS2"];
 }
 
 // =========================================
-// REAL-TIME CHARGE CALCULATOR POPUP MODAL
+// LIVE CHARGE & COST CALCULATOR POPUP MODAL
 // =========================================
 function calculateChargingEstimate({
   capacityKwh,
@@ -351,19 +351,19 @@ function calculateChargingEstimate({
     return { valid: false, error: "Battery capacity must be greater than 0 kWh." };
   }
   if (!Number.isFinite(cur) || cur < 0 || cur > 99) {
-    return { valid: false, error: "Current SoC must be between 0% and 99%." };
+    return { valid: false, error: "Current charge must be between 0% and 99%." };
   }
   if (!Number.isFinite(tgt) || tgt < 1 || tgt > 100) {
-    return { valid: false, error: "Target SoC must be between 1% and 100%." };
+    return { valid: false, error: "Target charge must be between 1% and 100%." };
   }
   if (tgt <= cur) {
-    return { valid: false, error: "Target SoC (%) must be higher than Current SoC (%)." };
+    return { valid: false, error: "Target charge (%) must be greater than Current charge (%)." };
   }
   if (!Number.isFinite(power) || power <= 0) {
     return { valid: false, error: "Charger power must be greater than 0 kW." };
   }
   if (!Number.isFinite(rate) || rate < 0) {
-    return { valid: false, error: "Price per kWh cannot be negative." };
+    return { valid: false, error: "Tariff per kWh cannot be negative." };
   }
 
   const energyRequiredKwh = (cap * (tgt - cur)) / 100;
@@ -396,13 +396,7 @@ function computeStationEstimate(station, vehicle) {
   });
 
   if (!calc.valid) {
-    return {
-      energyKwh: 0,
-      estimatedHours: 0,
-      estimatedCost: 0,
-      powerKw,
-      pricePerKwh
-    };
+    return { energyKwh: 0, estimatedHours: 0, estimatedCost: 0, powerKw, pricePerKwh };
   }
 
   return {
@@ -424,14 +418,12 @@ function populateCalculatorStationDropdown(preferredStationId = null) {
       const dist = getStationDistanceKm(s);
       const pwr = s.powerKw || s.power || 30;
       const rate = s.pricePerKwh || s.price || 15;
-      return `<option value="${s.id}" data-power="${pwr}" data-price="${rate}">${s.name} (${dist} km • ${pwr} kW • ₹${rate}/kWh)</option>`;
+      return `<option value="${s.id}">${s.name} (${dist} km • ${pwr} kW • ₹${rate}/kWh)</option>`;
     })
     .join("");
 
   const activeId = preferredStationId || selectedStationId || (stations[0] && stations[0].id);
-  if (activeId) {
-    selectEl.value = String(activeId);
-  }
+  if (activeId) selectEl.value = String(activeId);
 }
 
 function syncCalculatorWithStation(stationId) {
@@ -448,7 +440,6 @@ function syncCalculatorWithStation(stationId) {
 function fillCalculatorFromVehicleAndStation(stationId = null) {
   const vehicle = getVehicle();
   populateCalculatorStationDropdown(stationId);
-
   const selectEl = document.getElementById("calc-station-select");
   const chosenStationId = selectEl ? selectEl.value : stationId;
 
@@ -482,14 +473,16 @@ function runAndRenderCalculator() {
   const energyOut = document.getElementById("calc-energy-out");
   const timeOut = document.getElementById("calc-time-out");
   const costOut = document.getElementById("calc-cost-out");
-  const liveRateOut = document.getElementById("calc-live-clock-out");
+  const liveClockOut = document.getElementById("calc-live-clock-out");
 
-  if (liveRateOut) {
-    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    const kwVal = Number(power) || 0;
-    const rateVal = Number(price) || 0;
-    const kwPerMin = ((kwVal * rateVal) / 60).toFixed(2);
-    liveRateOut.textContent = `Live @ ${nowTime} • ~₹${kwPerMin}/min draw`;
+  if (liveClockOut) {
+    const nowTime = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+    const perMinCost = (((Number(power) || 0) * (Number(price) || 0)) / 60).toFixed(2);
+    liveClockOut.textContent = `Live ${nowTime} • ₹${perMinCost}/min`;
   }
 
   if (!result.valid) {
@@ -502,9 +495,7 @@ function runAndRenderCalculator() {
 
   if (errEl) errEl.textContent = "";
   if (energyOut) energyOut.textContent = `${result.energyRequiredKwh} kWh`;
-  if (timeOut) {
-    timeOut.textContent = `${result.estimatedHours} hrs (${result.formattedDuration})`;
-  }
+  if (timeOut) timeOut.textContent = `${result.estimatedHours} hrs (${result.formattedDuration})`;
   if (costOut) costOut.textContent = `₹${result.roundedCost}`;
   return result;
 }
@@ -524,7 +515,7 @@ function closeCalculatorModal() {
 }
 
 // =========================================
-// SCREEN 10: RULE-BASED RECOMMENDATION (NOT AI)
+// RULE-BASED RECOMMENDATION
 // =========================================
 function scoreStationRuleBased(station, vehicle) {
   let score = 0;
@@ -535,10 +526,10 @@ function scoreStationRuleBased(station, vehicle) {
 
   if (stationConnectors.includes(vehicleConnector)) {
     score += 30;
-    reasons.push(`Supports your ${vehicle?.connector || "CCS2"} connector`);
+    reasons.push(`Matches your ${vehicle?.connector || "CCS2"} connector`);
   } else {
     score += 5;
-    reasons.push(`Check adapter for ${vehicle?.connector || "CCS2"}`);
+    reasons.push(`Requires adapter for ${vehicle?.connector || "CCS2"}`);
   }
 
   const availablePortsCount = getAvailablePortCount(station);
@@ -550,27 +541,18 @@ function scoreStationRuleBased(station, vehicle) {
   }
 
   const distKm = getStationDistanceKm(station);
-  const clampedDist = Math.max(0, Math.min(25, distKm));
-  score += Math.round(((25 - clampedDist) / 25) * 20);
-  reasons.push(`${distKm} km away (${liveCoords.isLiveGps ? "live GPS" : "demo zone"})`);
+  score += Math.round(((25 - Math.max(0, Math.min(25, distKm))) / 25) * 20);
+  reasons.push(`${distKm} km away (${liveCoords.isLiveGps ? "live GPS" : "reference"})`);
 
   const powerKw = Number(station.powerKw ?? station.power ?? 22);
-  const clampedPower = Math.max(0, Math.min(120, powerKw));
-  score += Math.round((clampedPower / 120) * 15);
+  score += Math.round((Math.max(0, Math.min(120, powerKw)) / 120) * 15);
   reasons.push(`${powerKw} kW charging output`);
 
   const pricePerKwh = Number(station.pricePerKwh ?? station.price ?? 16);
-  const clampedPrice = Math.max(5, Math.min(30, pricePerKwh));
-  score += Math.round(((30 - clampedPrice) / 25) * 10);
-  reasons.push(`₹${pricePerKwh}/kWh sample tariff`);
+  score += Math.round(((30 - Math.max(5, Math.min(30, pricePerKwh))) / 25) * 10);
+  reasons.push(`₹${pricePerKwh}/kWh rate`);
 
-  return {
-    station,
-    score,
-    availablePortsCount,
-    distKm,
-    reasons
-  };
+  return { station, score, availablePortsCount, distKm, reasons };
 }
 
 function getRecommendedStationRuleBased(stationsList = null) {
@@ -592,7 +574,7 @@ function getRecommendedStationRuleBased(stationsList = null) {
 }
 
 // =========================================
-// SCREEN 5: STATION DETAILS & PORT VIEW
+// STATION DETAILS & PORT VIEW
 // =========================================
 function renderStationPorts(station, vehicleConnector) {
   const portsContainer = document.getElementById("detail-ports-list");
@@ -601,12 +583,11 @@ function renderStationPorts(station, vehicleConnector) {
 
   const ports = Array.isArray(station.ports) ? station.ports : [];
   if (portsCountEl) {
-    const availableCount = getAvailablePortCount(station);
-    portsCountEl.textContent = `${availableCount} of ${ports.length} available`;
+    portsCountEl.textContent = `${getAvailablePortCount(station)} of ${ports.length} available`;
   }
 
   if (ports.length === 0) {
-    portsContainer.innerHTML = `<p class="muted-text">No port details listed for this sample station.</p>`;
+    portsContainer.innerHTML = `<p class="card-subtitle">No port breakdown listed for this station.</p>`;
     return;
   }
 
@@ -620,24 +601,13 @@ function renderStationPorts(station, vehicleConnector) {
         !vehicleConnector ||
         String(connector).toLowerCase() === String(vehicleConnector).toLowerCase();
 
-      const pillClass =
-        status === "Available"
-          ? "status-pill--available"
-          : status === "Occupied"
-          ? "status-pill--occupied"
-          : status === "Reserved"
-          ? "status-pill--reserved"
-          : "status-pill--unavailable";
-
       return `
-        <div class="port-item-card" data-port-id="${portId}">
+        <div class="port-item-card">
           <div>
             <p class="port-item-title">${portId} • ${connector}</p>
-            <p class="port-item-sub">
-              Up to ${power} kW • ${isCompatible ? "Matches your EV" : "Check connector"}
-            </p>
+            <p class="port-item-sub">${power} kW • ${isCompatible ? "Compatible with your EV" : "Verify adapter"}</p>
           </div>
-          <span class="status-pill ${pillClass}">${status}</span>
+          <span class="status-pill status-pill--${status.toLowerCase()}">${status}</span>
         </div>
       `;
     })
@@ -666,8 +636,8 @@ function openStationDetails(stationId) {
     if (el) el.textContent = text;
   };
 
-  setText("detail-station-name", station.name || "Unnamed Station");
-  setText("detail-station-address", station.address || station.area || "Sample City Area");
+  setText("detail-station-name", station.name || "Charging Station");
+  setText("detail-station-address", station.address || station.area || "City Charging Hub");
 
   const badgeEl = document.getElementById("detail-station-status-badge");
   if (badgeEl) {
@@ -679,9 +649,7 @@ function openStationDetails(stationId) {
   setText("detail-station-type", station.chargerType || station.type || "DC Fast");
   setText("detail-station-power", `${estimate.powerKw} kW`);
   setText("detail-station-price", `₹${estimate.pricePerKwh} / kWh`);
-
-  const connectorsList = getStationConnectorsList(station).join(", ");
-  setText("detail-station-connectors", `Connectors: ${connectorsList}`);
+  setText("detail-station-connectors", `Connectors: ${getStationConnectorsList(station).join(", ")}`);
 
   setText("detail-vehicle-label", `${vehicle.name} (${vehicle.currentSoc}% → ${vehicle.targetSoc}%)`);
   setText("detail-est-energy", `${estimate.energyKwh} kWh`);
@@ -695,16 +663,14 @@ function openStationDetails(stationId) {
   if (bookBtn) {
     bookBtn.disabled = !hasAvailablePort;
     const span = bookBtn.querySelector("span");
-    if (span) {
-      span.textContent = hasAvailablePort ? "Book Charging Slot" : "No Ports Available";
-    }
+    if (span) span.textContent = hasAvailablePort ? "Book Charging Slot" : "No Ports Available";
   }
 
   showScreen("screen-station-details");
 }
 
 // =========================================
-// SCREENS 11, 12 & 13: SLOT BOOKING, 20% ADVANCE & CONFIRMATION
+// SLOT BOOKING, 20% ADVANCE & CONFIRMATION
 // =========================================
 function getTodayDateString() {
   const now = new Date();
@@ -735,15 +701,12 @@ function renderBookingPortSelector(station, vehicleConnector) {
   const ports = Array.isArray(station.ports) ? station.ports : [];
 
   selectedBookingPortId = null;
-
   if (!portSelect) return;
 
   if (ports.length === 0) {
-    portSelect.innerHTML = `<option value="">No ports listed</option>`;
+    portSelect.innerHTML = `<option value="">No ports available</option>`;
     portSelect.disabled = true;
-    if (portNoteEl) {
-      portNoteEl.textContent = "This sample station has no ports available for booking.";
-    }
+    if (portNoteEl) portNoteEl.textContent = "No charging ports configured for this station.";
     return;
   }
 
@@ -759,25 +722,23 @@ function renderBookingPortSelector(station, vehicleConnector) {
         !vehicleConnector ||
         String(connector).toLowerCase() === String(vehicleConnector).toLowerCase();
 
-      const labelSuffix = !isOpen
-        ? `(${status} - Blocked)`
-        : isCompatible
-        ? `(Available • Matches EV)`
-        : `(Available • ${connector})`;
-
       if (!selectedBookingPortId && isOpen && isCompatible) {
         selectedBookingPortId = portId;
       }
 
-      return `<option value="${portId}" ${!isOpen ? "disabled" : ""}>${portId} • ${connector} • ${power} kW ${labelSuffix}</option>`;
+      const suffix = !isOpen
+        ? `(${status})`
+        : isCompatible
+        ? `(Available • Matches EV)`
+        : `(Available)`;
+
+      return `<option value="${portId}" ${!isOpen ? "disabled" : ""}>${portId} • ${connector} • ${power} kW ${suffix}</option>`;
     })
     .join("");
 
   if (!selectedBookingPortId) {
     const firstOpen = ports.find((p) => normalizePortStatus(p.status) === "Available");
-    if (firstOpen) {
-      selectedBookingPortId = String(firstOpen.id || "Port-1");
-    }
+    if (firstOpen) selectedBookingPortId = String(firstOpen.id || "Port-1");
   }
 
   if (selectedBookingPortId) {
@@ -789,8 +750,8 @@ function renderBookingPortSelector(station, vehicleConnector) {
 
   if (portNoteEl) {
     portNoteEl.textContent = selectedBookingPortId
-      ? "Occupied, Reserved, and Unavailable ports are automatically blocked."
-      : "No Available ports right now. Occupied/Reserved ports cannot be booked.";
+      ? "Occupied and Reserved ports are locked from selection."
+      : "No Available ports right now.";
   }
 }
 
@@ -804,12 +765,12 @@ function renderBookingTimeSlots() {
 
   slotsContainer.innerHTML = SAMPLE_TIME_SLOTS
     .map((slot) => {
-      const isSelected = slot === selectedBookingSlot;
+      const active = slot === selectedBookingSlot;
       return `
         <button
           type="button"
-          class="slot-pill-btn ${isSelected ? "active" : ""}"
-          aria-pressed="${isSelected ? "true" : "false"}"
+          class="slot-pill-btn ${active ? "active" : ""}"
+          aria-pressed="${active ? "true" : "false"}"
           data-slot="${slot}"
         >
           ${slot}
@@ -848,8 +809,14 @@ function openSlotBooking(stationId = null) {
   };
 
   setText("booking-station-name", station.name);
-  setText("booking-station-meta", `${station.address || "Sample Area"} • ${estimate.powerKw} kW • ₹${estimate.pricePerKwh}/kWh`);
-  setText("booking-vehicle-summary", `${vehicle.name} (${vehicle.connector}, ${vehicle.currentSoc}% → ${vehicle.targetSoc}%)`);
+  setText(
+    "booking-station-meta",
+    `${station.address || "City Hub"} • ${estimate.powerKw} kW • ₹${estimate.pricePerKwh}/kWh`
+  );
+  setText(
+    "booking-vehicle-summary",
+    `${vehicle.name} (${vehicle.connector}, ${vehicle.currentSoc}% → ${vehicle.targetSoc}%)`
+  );
   setText("booking-est-energy-val", `${estimate.energyKwh} kWh`);
   setText("booking-est-time-val", `${estimate.estimatedHours} hrs`);
 
@@ -857,22 +824,16 @@ function openSlotBooking(stationId = null) {
   renderBookingPortSelector(station, vehicle.connector);
 
   const dateInput = document.getElementById("booking-date-input");
-  if (dateInput && !dateInput.value) {
-    dateInput.value = getTodayDateString();
-  }
+  if (dateInput && !dateInput.value) dateInput.value = getTodayDateString();
 
   renderBookingTimeSlots();
 
-  const confirmCard = document.getElementById("booking-confirmation-card");
-  if (confirmCard) confirmCard.classList.add("hidden");
-
+  document.getElementById("booking-confirmation-card")?.classList.add("hidden");
   const errEl = document.getElementById("booking-error-msg");
   if (errEl) errEl.textContent = "";
 
   const payBtn = document.getElementById("btn-simulate-payment");
-  if (payBtn) {
-    payBtn.disabled = !selectedBookingPortId;
-  }
+  if (payBtn) payBtn.disabled = !selectedBookingPortId;
 
   showScreen("screen-booking");
 }
@@ -886,9 +847,7 @@ function handleSimulateAdvancePayment() {
 
   const stations = getStations();
   const stationIndex = stations.findIndex((s) => String(s.id) === String(selectedStationId));
-  if (stationIndex === -1) {
-    return setErr("Station not found. Please go back and select a station.");
-  }
+  if (stationIndex === -1) return setErr("Station not found.");
 
   const station = stations[stationIndex];
   const portSelect = document.getElementById("booking-port-select");
@@ -896,28 +855,19 @@ function handleSimulateAdvancePayment() {
   const chosenDate = document.getElementById("booking-date-input")?.value || "";
   const chosenSlot = selectedBookingSlot || "";
 
-  if (!chosenPortId) {
-    return setErr("Please select an Available charging port.");
-  }
-  if (!chosenDate) {
-    return setErr("Please select a booking date.");
-  }
-  if (!chosenSlot) {
-    return setErr("Please select a time slot.");
-  }
+  if (!chosenPortId) return setErr("Please select an Available charging port.");
+  if (!chosenDate) return setErr("Please select a booking date.");
+  if (!chosenSlot) return setErr("Please select a time slot.");
 
   const ports = Array.isArray(station.ports) ? station.ports : [];
   const portIndex = ports.findIndex(
     (p, idx) => String(p.id || `Port-${idx + 1}`) === chosenPortId
   );
-
-  if (portIndex === -1) {
-    return setErr("Selected port was not found.");
-  }
+  if (portIndex === -1) return setErr("Selected port not found.");
 
   const currentPortStatus = normalizePortStatus(ports[portIndex].status);
   if (currentPortStatus !== "Available") {
-    return setErr(`Port ${chosenPortId} is currently ${currentPortStatus} and cannot be booked.`);
+    return setErr(`Port ${chosenPortId} is currently ${currentPortStatus}.`);
   }
 
   const vehicle = getVehicle();
@@ -940,7 +890,7 @@ function handleSimulateAdvancePayment() {
     bookingId,
     stationId: station.id,
     stationName: station.name,
-    stationAddress: station.address || "Sample Area",
+    stationAddress: station.address || "City Hub",
     portId: chosenPortId,
     connector: station.ports[portIndex].connector || station.connector || vehicle.connector,
     date: chosenDate,
@@ -978,10 +928,10 @@ function handleSimulateAdvancePayment() {
     setText("conf-booking-id", `Booking ID: ${bookingRecord.bookingId}`);
     setText("conf-station-name", bookingRecord.stationName);
     setText("conf-port-slot", `${bookingRecord.portId} • ${bookingRecord.date} • ${bookingRecord.timeSlot}`);
-    setText("conf-vehicle-info", `${bookingRecord.vehicleName} (${bookingRecord.energyKwh} kWh est.)`);
+    setText("conf-vehicle-info", `${bookingRecord.vehicleName} • ${bookingRecord.energyKwh} kWh est.`);
     setText(
       "conf-payment-summary",
-      `Simulated Advance Paid (20%): ₹${bookingRecord.advancePaidSimulated} • Remaining at Station (80%): ₹${bookingRecord.remainingBalanceSimulated}`
+      `20% Advance Paid (Simulated): ₹${bookingRecord.advancePaidSimulated} • Balance (80%): ₹${bookingRecord.remainingBalanceSimulated}`
     );
   }
 
@@ -989,7 +939,7 @@ function handleSimulateAdvancePayment() {
 }
 
 // =========================================
-// SCREEN 14: BOOKINGS HISTORY & LIVE TELEMETRY
+// BOOKING HISTORY & TELEMETRY
 // =========================================
 function updateBookingStatus(bookingId, newStatus) {
   const bookings = getBookingsFromStorage();
@@ -1018,7 +968,6 @@ function getLiveTelemetryForBooking(booking) {
   const powerKw = Number(booking.powerKw ?? 30);
   const rate = Number(booking.pricePerKwh ?? 15);
 
-  // Accelerated real-time simulation: 1 real second = 1 minute of simulated charging
   const simMinutesElapsed = elapsedSec;
   const kwhDelivered = Math.min(
     Number(booking.energyKwh || (cap * (targetSoc - startSoc)) / 100),
@@ -1030,12 +979,7 @@ function getLiveTelemetryForBooking(booking) {
   );
   const liveAccruedCost = Math.round(kwhDelivered * rate);
 
-  return {
-    liveSoc,
-    kwhDelivered,
-    liveAccruedCost,
-    elapsedFormatted: `${Math.floor(simMinutesElapsed / 60)}h ${simMinutesElapsed % 60}m sim`
-  };
+  return { liveSoc, kwhDelivered, liveAccruedCost };
 }
 
 function renderBookingsScreen() {
@@ -1043,18 +987,15 @@ function renderBookingsScreen() {
   const countEl = document.getElementById("bookings-count-label");
   const bookings = getBookingsFromStorage();
 
-  if (countEl) {
-    countEl.textContent = `${bookings.length} booking${bookings.length === 1 ? "" : "s"}`;
-  }
-
+  if (countEl) countEl.textContent = `${bookings.length}`;
   if (!listEl) return;
 
   if (bookings.length === 0) {
     listEl.innerHTML = `
-      <div class="booking-history-card">
+      <div class="surface-card">
         <h4 class="port-item-title">No Slot Bookings Yet</h4>
-        <p class="muted-text" style="margin-top:4px;">
-          Open any charging station, tap <strong>Book Charging Slot</strong>, and simulate a 20% advance payment to see live slot telemetry here.
+        <p class="card-subtitle" style="margin-top:4px;">
+          Select a station, choose an available port, and complete the simulated 20% advance payment to see your booking here.
         </p>
       </div>
     `;
@@ -1072,24 +1013,24 @@ function renderBookingsScreen() {
           ? "status-pill--available"
           : "status-pill--occupied";
 
-      const isActiveReservation = status === "Reserved";
+      const isActive = status === "Reserved";
       const te = getLiveTelemetryForBooking(b);
 
       return `
-        <article class="booking-history-card">
+        <article class="surface-card">
           <div class="detail-top-row" style="margin-bottom:8px;">
             <div>
               <span class="booking-id-badge">${b.bookingId}</span>
               <h4 class="port-item-title">${b.stationName}</h4>
-              <p class="muted-text">${b.portId} • ${b.connector || "CCS2"} • ${b.date} • ${b.timeSlot}</p>
+              <p class="card-subtitle">${b.portId} • ${b.connector || "CCS2"} • ${b.date} • ${b.timeSlot}</p>
             </div>
             <span class="status-pill ${badgeClass}">${status}</span>
           </div>
 
           <div class="live-telemetry-strip">
-            <span>Live SoC: <strong>${isActiveReservation ? `${te.liveSoc}%` : `${b.targetSoc || 80}%`}</strong></span>
-            <span>Delivered: <strong>${isActiveReservation ? `${te.kwhDelivered} kWh` : `${b.energyKwh} kWh`}</strong></span>
-            <span>Session Cost: <strong>₹${isActiveReservation ? te.liveAccruedCost : b.totalEstimatedCost}</strong></span>
+            <span>SoC: <strong>${isActive ? `${te.liveSoc}%` : `${b.targetSoc || 80}%`}</strong></span>
+            <span>Energy: <strong>${isActive ? `${te.kwhDelivered} kWh` : `${b.energyKwh} kWh`}</strong></span>
+            <span>Est. Cost: <strong>₹${isActive ? te.liveAccruedCost : b.totalEstimatedCost}</strong></span>
           </div>
 
           <div class="booking-kv-grid">
@@ -1098,18 +1039,18 @@ function renderBookingsScreen() {
               <strong class="meta-value">${b.vehicleName}</strong>
             </div>
             <div>
-              <span class="meta-label">20% Advance / 80% Due</span>
+              <span class="meta-label">20% Adv / 80% Due</span>
               <strong class="meta-value highlight-green">₹${b.advancePaidSimulated} / ₹${b.remainingBalanceSimulated}</strong>
             </div>
           </div>
 
           ${
-            isActiveReservation
+            isActive
               ? `<div class="booking-card-actions">
                   <button type="button" class="btn-sm-teal" onclick="updateBookingStatus('${b.bookingId}', 'Completed')">Complete &amp; Free Port</button>
-                  <button type="button" class="btn-danger-ghost" onclick="updateBookingStatus('${b.bookingId}', 'Cancelled')">Cancel Slot</button>
+                  <button type="button" class="btn-danger-ghost" onclick="updateBookingStatus('${b.bookingId}', 'Cancelled')">Cancel</button>
                 </div>`
-              : `<p class="muted-text" style="margin-top:10px;">Port status released back to station pool.</p>`
+              : `<p class="card-subtitle" style="margin-top:10px;">Port released back to available pool.</p>`
           }
         </article>
       `;
@@ -1120,7 +1061,7 @@ function renderBookingsScreen() {
 }
 
 // =========================================
-// SCREEN 15: DRIVER PROFILE & DATA CONTROLS
+// USER PROFILE & VEHICLE PROFILE
 // =========================================
 function renderProfileScreen() {
   const user = JSON.parse(localStorage.getItem("goev_user")) || {
@@ -1138,8 +1079,8 @@ function renderProfileScreen() {
   setText("profile-driver-name", user.name || "EV Driver");
   setText("profile-driver-email", user.email || "demo@goev.app");
   setText("profile-vehicle-summary", `${vehicle.name} • ${vehicle.capacity} kWh • ${vehicle.connector}`);
-  setText("profile-soc-summary", `${vehicle.currentSoc}% → ${vehicle.targetSoc}% target`);
-  setText("profile-bookings-count", `${bookings.length} recorded`);
+  setText("profile-soc-summary", `${vehicle.currentSoc}% → ${vehicle.targetSoc}%`);
+  setText("profile-bookings-count", `${bookings.length}`);
 
   const msgEl = document.getElementById("profile-action-msg");
   if (msgEl) msgEl.textContent = "";
@@ -1153,7 +1094,7 @@ function handleResetSampleStations() {
     activeStationFilters = { ...DEFAULT_FILTER_STATE };
     const msgEl = document.getElementById("profile-action-msg");
     if (msgEl) {
-      msgEl.textContent = "Station data & filters reset to default baseline.";
+      msgEl.textContent = "Stations & filters reset to default state.";
       msgEl.style.color = "#16C784";
     }
   }
@@ -1165,9 +1106,6 @@ function handleLogoutDriver() {
   showScreen("screen-auth");
 }
 
-// =========================================
-// SCREEN 6: EV VEHICLE PROFILE
-// =========================================
 function populateVehicleForm(vehicle) {
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -1181,17 +1119,13 @@ function populateVehicleForm(vehicle) {
 }
 
 function renderVehicleScreen() {
-  const currentVehicle = getVehicle();
-  populateVehicleForm(currentVehicle);
+  populateVehicleForm(getVehicle());
   const statusMsg = document.getElementById("vehicle-status-msg");
-  if (statusMsg) {
-    statusMsg.textContent = "";
-    statusMsg.className = "form-status-msg";
-  }
+  if (statusMsg) statusMsg.textContent = "";
 }
 
 // =========================================
-// SCREEN 7: STATION FILTERS & RESET
+// SEARCH & FILTERS
 // =========================================
 function getFilteredStations() {
   const allStations = getStations();
@@ -1202,14 +1136,10 @@ function getFilteredStations() {
 
     if (activeStationFilters.connector !== "ALL") {
       const connectors = getStationConnectorsList(station).map((c) => c.toLowerCase());
-      if (!connectors.includes(activeStationFilters.connector.toLowerCase())) {
-        return false;
-      }
+      if (!connectors.includes(activeStationFilters.connector.toLowerCase())) return false;
     }
 
-    if (activeStationFilters.availableOnly && getAvailablePortCount(station) === 0) {
-      return false;
-    }
+    if (activeStationFilters.availableOnly && getAvailablePortCount(station) === 0) return false;
 
     if (activeStationFilters.speed !== "ALL") {
       const power = Number(station.powerKw || station.power || 0);
@@ -1239,8 +1169,7 @@ function syncFilterInputsFromState() {
       activeStationFilters.connector === "ALL" ? "" : activeStationFilters.connector;
   }
   if (speedSelect) {
-    speedSelect.value =
-      activeStationFilters.speed === "ALL" ? "" : activeStationFilters.speed;
+    speedSelect.value = activeStationFilters.speed === "ALL" ? "" : activeStationFilters.speed;
   }
   if (priceInput) priceInput.value = activeStationFilters.maxPrice;
   if (availCheck) availCheck.checked = activeStationFilters.availableOnly;
@@ -1270,8 +1199,84 @@ function resetStationFilters() {
 }
 
 // =========================================
-// SCREEN 4: INTERACTIVE MAP & EXPLORE LIST
+// UNIFIED STATION CARD RENDERER
 // =========================================
+function renderStationCardHtml(station, compactFooterLabel = "ports available") {
+  const availPorts = getAvailablePortCount(station);
+  const distKm = getStationDistanceKm(station);
+  const aggStatus = getStationAggregateStatus(station);
+
+  return `
+    <div class="station-card">
+      <div class="station-card-top">
+        <span class="station-name">${station.name}</span>
+        <span class="status-pill ${aggStatus.cssClass}">${aggStatus.label}</span>
+      </div>
+      <div class="station-meta">
+        <span><i data-lucide="navigation"></i>${distKm} km</span>
+        <span><i data-lucide="plug"></i>${station.connector}</span>
+        <span><i data-lucide="zap"></i>${station.power} kW</span>
+        <span><i data-lucide="indian-rupee"></i>₹${station.pricePerKwh}/kWh</span>
+      </div>
+      <div class="station-card-footer">
+        <small class="muted-count">${availPorts}/${station.ports.length} ${compactFooterLabel}</small>
+        <button type="button" class="btn-sm-teal" onclick="openStationDetails('${station.id}')">View Details</button>
+      </div>
+    </div>
+  `;
+}
+
+// =========================================
+// HOME MAP PREVIEW & EXPLORE FULL MAP
+// =========================================
+function renderHomePreviewMap(stations) {
+  const mapEl = document.getElementById("goev-home-preview-map");
+  const summaryEl = document.getElementById("home-preview-summary");
+  if (summaryEl) {
+    summaryEl.textContent = `${stations.length} stations in range`;
+  }
+  if (!mapEl || !window.L) return;
+
+  if (!goevHomePreviewMap) {
+    goevHomePreviewMap = L.map("goev-home-preview-map", {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([liveCoords.lat, liveCoords.lng], 12);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18
+    }).addTo(goevHomePreviewMap);
+
+    previewMarkersLayer = L.layerGroup().addTo(goevHomePreviewMap);
+  }
+
+  previewMarkersLayer.clearLayers();
+
+  L.circleMarker([liveCoords.lat, liveCoords.lng], {
+    radius: 6,
+    fillColor: "#16A6A0",
+    color: "#FFFFFF",
+    weight: 2,
+    fillOpacity: 1
+  }).addTo(previewMarkersLayer);
+
+  stations.slice(0, 8).forEach((station) => {
+    const marker = L.circleMarker([station.lat, station.lng], {
+      radius: 7,
+      fillColor: getMarkerColor(station.status),
+      color: "#101D2B",
+      weight: 1.5,
+      fillOpacity: 0.95
+    });
+    marker.on("click", () => openStationDetails(station.id));
+    marker.addTo(previewMarkersLayer);
+  });
+
+  setTimeout(() => {
+    goevHomePreviewMap?.invalidateSize();
+  }, 150);
+}
+
 function initOrUpdateMap(stations) {
   const mapEl = document.getElementById("goev-map");
   const fallbackBox = document.getElementById("map-fallback-box");
@@ -1292,25 +1297,17 @@ function initOrUpdateMap(stations) {
 
   if (!goevMap) {
     goevMap = L.map("goev-map").setView([liveCoords.lat, liveCoords.lng], 13);
-
     const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
     });
-
-    tileLayer.on("tileerror", () => {
-      fallbackBox?.classList.remove("hidden");
-    });
-
+    tileLayer.on("tileerror", () => fallbackBox?.classList.remove("hidden"));
     tileLayer.addTo(goevMap);
     mapMarkersLayer = L.layerGroup().addTo(goevMap);
   }
 
-  if (!navigator.onLine) {
-    fallbackBox?.classList.remove("hidden");
-  } else {
-    fallbackBox?.classList.add("hidden");
-  }
+  if (!navigator.onLine) fallbackBox?.classList.remove("hidden");
+  else fallbackBox?.classList.add("hidden");
 
   if (fallbackPins) {
     fallbackPins.innerHTML = stations
@@ -1323,30 +1320,27 @@ function initOrUpdateMap(stations) {
 
   mapMarkersLayer.clearLayers();
 
-  // Plot user current position marker
-  userLocationMarker = L.circleMarker([liveCoords.lat, liveCoords.lng], {
+  L.circleMarker([liveCoords.lat, liveCoords.lng], {
     radius: 8,
-    fillColor: "#38BDF8",
+    fillColor: "#16A6A0",
     color: "#FFFFFF",
     weight: 2.5,
-    opacity: 1,
     fillOpacity: 1
-  }).bindPopup(
-    `<strong>${liveCoords.isLiveGps ? "Your Live GPS Location" : "Demo Reference Location"}</strong><br/>${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)}`
-  );
-  userLocationMarker.addTo(mapMarkersLayer);
+  })
+    .bindPopup(
+      `<strong>${liveCoords.isLiveGps ? "Your Live GPS" : "Reference Location"}</strong><br/>${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)}`
+    )
+    .addTo(mapMarkersLayer);
 
   stations.forEach((station) => {
-    const color = getMarkerColor(station.status);
     const availPorts = getAvailablePortCount(station);
     const distKm = getStationDistanceKm(station);
 
     const marker = L.circleMarker([station.lat, station.lng], {
       radius: 9,
-      fillColor: color,
+      fillColor: getMarkerColor(station.status),
       color: "#101D2B",
       weight: 2,
-      opacity: 1,
       fillOpacity: 0.95
     });
 
@@ -1354,10 +1348,9 @@ function initOrUpdateMap(stations) {
       <div>
         <strong>${station.name}</strong><br/>
         Distance: ${distKm} km<br/>
-        Connector: ${station.connector}<br/>
-        Power: ${station.power} kW<br/>
-        Price: ₹${station.pricePerKwh}/kWh<br/>
-        Available Ports: ${availPorts}/${station.ports.length}<br/>
+        Connector: ${station.connector} • ${station.power} kW<br/>
+        Tariff: ₹${station.pricePerKwh}/kWh<br/>
+        Available: ${availPorts}/${station.ports.length} ports<br/>
         <button type="button" onclick="openStationDetails('${station.id}')" style="margin-top:6px;padding:4px 8px;background:#16C784;color:#101D2B;border:none;border-radius:6px;font-weight:700;cursor:pointer;">View Details</button>
       </div>
     `);
@@ -1366,7 +1359,7 @@ function initOrUpdateMap(stations) {
   });
 
   setTimeout(() => {
-    goevMap.invalidateSize();
+    goevMap?.invalidateSize();
   }, 150);
 }
 
@@ -1375,56 +1368,28 @@ function renderExploreScreen() {
     (a, b) => getStationDistanceKm(a) - getStationDistanceKm(b)
   );
   const countEl = document.getElementById("explore-station-count");
-  if (countEl) {
-    countEl.textContent = `${stations.length} stations`;
-  }
+  if (countEl) countEl.textContent = `${stations.length} stations`;
 
   initOrUpdateMap(stations);
 
   const listEl = document.getElementById("explore-stations-list");
   if (listEl) {
-    if (stations.length === 0) {
-      listEl.innerHTML = `<div class="station-card"><p class="rec-specs" style="color:#64748B;margin:0;">No stations match your active filters.</p></div>`;
-    } else {
-      listEl.innerHTML = stations
-        .map((station) => {
-          const availPorts = getAvailablePortCount(station);
-          const distKm = getStationDistanceKm(station);
-          return `
-            <div class="station-card">
-              <div class="station-card-top">
-                <span class="station-name">${station.name}</span>
-                <span class="status-pill ${getStatusClass(station.status)}">${station.status}</span>
-              </div>
-              <div class="station-meta">
-                <span><i data-lucide="navigation"></i>${distKm} km</span>
-                <span><i data-lucide="plug"></i>${station.connector}</span>
-                <span><i data-lucide="zap"></i>${station.power} kW</span>
-                <span><i data-lucide="indian-rupee"></i>₹${station.pricePerKwh}/kWh</span>
-              </div>
-              <div class="station-card-footer">
-                <small class="muted-count">${availPorts} of ${station.ports.length} ports available</small>
-                <button type="button" class="btn-sm-teal" onclick="openStationDetails('${station.id}')">View Details</button>
-              </div>
-            </div>
-          `;
-        })
-        .join("");
-    }
+    listEl.innerHTML =
+      stations.length === 0
+        ? `<div class="station-card"><p class="muted-count">No stations match your active filters.</p></div>`
+        : stations.map((s) => renderStationCardHtml(s, "ports available")).join("");
   }
 
   renderIcons();
 }
 
 // =========================================
-// SCREEN 3 & 10: HOME DASHBOARD + RECOMMENDATION
+// HOME DASHBOARD RENDERER
 // =========================================
 function renderHomeDashboard() {
   const user = JSON.parse(localStorage.getItem("goev_user"));
   const nameEl = document.getElementById("home-user-name");
-  if (nameEl) {
-    nameEl.textContent = user && user.name ? user.name : "EV Driver";
-  }
+  if (nameEl) nameEl.textContent = user && user.name ? user.name : "EV Driver";
 
   const vehicle = getVehicle();
   const allStations = getStations();
@@ -1435,6 +1400,8 @@ function renderHomeDashboard() {
     .trim()
     .toLowerCase();
 
+  renderHomePreviewMap(filteredStations);
+
   const recContainer = document.getElementById("home-recommended-card");
   const topPick = getRecommendedStationRuleBased(filteredStations);
   if (recContainer) {
@@ -1442,18 +1409,14 @@ function renderHomeDashboard() {
       const { station, score, distKm, reasons } = topPick;
       const estimate = computeStationEstimate(station, vehicle);
       recContainer.innerHTML = `
-        <div class="rec-card-header">
-          <div>
-            <span class="rec-badge">Rule-Based Pick (Not AI) • ${score}/100</span>
-            <h4 class="rec-title">${station.name}</h4>
-            <p class="rec-specs">${distKm} km • ${station.connector} • ${station.power} kW • ₹${station.pricePerKwh}/kWh</p>
-          </div>
-        </div>
+        <span class="rec-badge">Rule-Based Pick • ${score}/100</span>
+        <h4 class="rec-title">${station.name}</h4>
+        <p class="rec-specs">${distKm} km • ${station.connector} • ${station.power} kW • ₹${station.pricePerKwh}/kWh</p>
         <ul class="rec-reasons-list">
           ${reasons.slice(0, 3).map((r) => `<li>${r}</li>`).join("")}
         </ul>
         <div class="rec-card-footer">
-          <span class="rec-specs" style="margin:0;">Est. Cost: <strong>₹${estimate.estimatedCost}</strong> (${estimate.energyKwh} kWh)</span>
+          <span class="rec-specs">Est. Cost: <strong>₹${estimate.estimatedCost}</strong> (${estimate.energyKwh} kWh)</span>
           <button type="button" class="btn-sm-teal" onclick="openStationDetails('${station.id}')">View Details</button>
         </div>
       `;
@@ -1472,56 +1435,27 @@ function renderHomeDashboard() {
   });
 
   const countEl = document.getElementById("home-station-count");
-  if (countEl) {
-    countEl.textContent = `${searched.length} of ${allStations.length} stations`;
-  }
+  if (countEl) countEl.textContent = `${searched.length} of ${allStations.length}`;
 
   const listEl = document.getElementById("home-stations-list");
   if (listEl) {
-    if (searched.length === 0) {
-      listEl.innerHTML = `<div class="station-card"><p class="rec-specs" style="color:#64748B;margin:0;">No matching stations found.</p></div>`;
-    } else {
-      listEl.innerHTML = searched
-        .map((station) => {
-          const availPorts = getAvailablePortCount(station);
-          const distKm = getStationDistanceKm(station);
-          return `
-            <div class="station-card">
-              <div class="station-card-top">
-                <span class="station-name">${station.name}</span>
-                <span class="status-pill ${getStatusClass(station.status)}">${station.status}</span>
-              </div>
-              <div class="station-meta">
-                <span><i data-lucide="navigation"></i>${distKm} km</span>
-                <span><i data-lucide="plug"></i>${station.connector}</span>
-                <span><i data-lucide="zap"></i>${station.power} kW</span>
-                <span><i data-lucide="indian-rupee"></i>₹${station.pricePerKwh}/kWh</span>
-              </div>
-              <div class="station-card-footer">
-                <small class="muted-count">${availPorts}/${station.ports.length} ports free</small>
-                <button type="button" class="btn-sm-teal" onclick="openStationDetails('${station.id}')">View Details</button>
-              </div>
-            </div>
-          `;
-        })
-        .join("");
-    }
+    listEl.innerHTML =
+      searched.length === 0
+        ? `<div class="station-card"><p class="muted-count">No matching charging stations found.</p></div>`
+        : searched.map((s) => renderStationCardHtml(s, "ports free")).join("");
   }
 
   renderIcons();
 }
 
 // =========================================
-// NAVIGATION & AUTHENTICATION (SCREENS 1 & 2)
+// NAVIGATION & AUTHENTICATION
 // =========================================
 function showScreen(screenId) {
-  const screens = document.querySelectorAll(".screen");
-  screens.forEach((screen) => screen.classList.remove("active"));
+  document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
 
   const target = document.getElementById(screenId);
-  if (target) {
-    target.classList.add("active");
-  }
+  if (target) target.classList.add("active");
 
   const bottomNav = document.getElementById("bottom-nav");
   if (bottomNav) {
@@ -1529,19 +1463,12 @@ function showScreen(screenId) {
     bottomNav.classList.toggle("hidden", hideNav);
   }
 
-  if (screenId === "screen-home") {
-    renderHomeDashboard();
-  } else if (screenId === "screen-explore") {
-    renderExploreScreen();
-  } else if (screenId === "screen-vehicle") {
-    renderVehicleScreen();
-  } else if (screenId === "screen-filters") {
-    syncFilterInputsFromState();
-  } else if (screenId === "screen-bookings") {
-    renderBookingsScreen();
-  } else if (screenId === "screen-profile") {
-    renderProfileScreen();
-  }
+  if (screenId === "screen-home") renderHomeDashboard();
+  else if (screenId === "screen-explore") renderExploreScreen();
+  else if (screenId === "screen-vehicle") renderVehicleScreen();
+  else if (screenId === "screen-filters") syncFilterInputsFromState();
+  else if (screenId === "screen-bookings") renderBookingsScreen();
+  else if (screenId === "screen-profile") renderProfileScreen();
 
   setActiveNav(screenId);
   renderIcons();
@@ -1549,16 +1476,14 @@ function showScreen(screenId) {
 
 function setAuthMode(signup) {
   isSignupMode = signup;
-  const tabLogin = document.getElementById("tab-login");
-  const tabSignup = document.getElementById("tab-signup");
-  const nameGroup = document.getElementById("field-name-group");
-  const submitLabel = document.getElementById("btn-auth-label");
-  const msgEl = document.getElementById("auth-message");
+  document.getElementById("tab-login")?.classList.toggle("active", !signup);
+  document.getElementById("tab-signup")?.classList.toggle("active", signup);
+  document.getElementById("field-name-group")?.classList.toggle("hidden", !signup);
 
-  tabLogin?.classList.toggle("active", !signup);
-  tabSignup?.classList.toggle("active", signup);
-  nameGroup?.classList.toggle("hidden", !signup);
+  const submitLabel = document.getElementById("btn-auth-label");
   if (submitLabel) submitLabel.textContent = signup ? "Create Account" : "Login";
+
+  const msgEl = document.getElementById("auth-message");
   if (msgEl) {
     msgEl.textContent = "";
     msgEl.className = "auth-message";
@@ -1583,7 +1508,7 @@ function handleAuthSubmit(event) {
 
   if (isSignupMode && !nameInput) {
     if (msgEl) {
-      msgEl.textContent = "Please enter your name to sign up.";
+      msgEl.textContent = "Please enter your full name.";
       msgEl.className = "auth-message error";
     }
     return;
@@ -1592,10 +1517,9 @@ function handleAuthSubmit(event) {
   const users = JSON.parse(localStorage.getItem("goev_users")) || [];
 
   if (isSignupMode) {
-    const exists = users.some((u) => u.email.toLowerCase() === emailInput.toLowerCase());
-    if (exists) {
+    if (users.some((u) => u.email.toLowerCase() === emailInput.toLowerCase())) {
       if (msgEl) {
-        msgEl.textContent = "Account with this email already exists. Try logging in.";
+        msgEl.textContent = "An account with this email already exists.";
         msgEl.className = "auth-message error";
       }
       return;
@@ -1607,10 +1531,10 @@ function handleAuthSubmit(event) {
     localStorage.setItem("goev_user", JSON.stringify({ name: newUser.name, email: newUser.email }));
 
     if (msgEl) {
-      msgEl.textContent = "Account created! Opening Home Dashboard...";
+      msgEl.textContent = "Registration successful! Opening GoEV...";
       msgEl.className = "auth-message success";
     }
-    setTimeout(() => showScreen("screen-home"), 400);
+    setTimeout(() => showScreen("screen-home"), 350);
   } else {
     const matchedUser = users.find(
       (u) => u.email.toLowerCase() === emailInput.toLowerCase() && u.password === passwordInput
@@ -1619,12 +1543,12 @@ function handleAuthSubmit(event) {
     if (matchedUser) {
       localStorage.setItem("goev_user", JSON.stringify({ name: matchedUser.name, email: matchedUser.email }));
       if (msgEl) {
-        msgEl.textContent = "Login successful! Opening Home Dashboard...";
+        msgEl.textContent = "Login successful! Opening GoEV...";
         msgEl.className = "auth-message success";
       }
-      setTimeout(() => showScreen("screen-home"), 400);
+      setTimeout(() => showScreen("screen-home"), 350);
     } else if (msgEl) {
-      msgEl.textContent = "Invalid email or password. Try Sign Up or Continue as Demo Driver.";
+      msgEl.textContent = "Invalid credentials. Register or use Continue as Demo Driver.";
       msgEl.className = "auth-message error";
     }
   }
@@ -1641,34 +1565,26 @@ window.updateBookingStatus = updateBookingStatus;
 // INITIALIZATION & EVENT LISTENERS
 // =========================================
 document.addEventListener("DOMContentLoaded", () => {
-  if (typeof initDatabase === "function") {
-    initDatabase();
-  }
-  if (!localStorage.getItem("goev_vehicle")) {
-    saveVehicleToStorage(DEFAULT_GOEV_VEHICLE);
-  }
+  if (typeof initDatabase === "function") initDatabase();
+  if (!localStorage.getItem("goev_vehicle")) saveVehicleToStorage(DEFAULT_GOEV_VEHICLE);
 
   renderIcons();
   requestLiveGpsLocation(false);
 
-  // Real-time live calculator clock & active session telemetry tick
   telemetryTimerId = setInterval(() => {
     const modal = document.getElementById("calculator-modal");
-    if (modal && !modal.classList.contains("hidden")) {
-      runAndRenderCalculator();
-    }
+    if (modal && !modal.classList.contains("hidden")) runAndRenderCalculator();
+
     const bookingsScreen = document.getElementById("screen-bookings");
-    if (bookingsScreen && bookingsScreen.classList.contains("active")) {
-      renderBookingsScreen();
-    }
+    if (bookingsScreen && bookingsScreen.classList.contains("active")) renderBookingsScreen();
   }, 1000);
 
-  // Screen 1: Splash -> Auth
+  // Splash -> Auth
   document.getElementById("btn-get-started")?.addEventListener("click", () => {
     showScreen("screen-auth");
   });
 
-  // Screen 2: Auth
+  // Auth
   document.getElementById("tab-login")?.addEventListener("click", () => setAuthMode(false));
   document.getElementById("tab-signup")?.addEventListener("click", () => setAuthMode(true));
   document.getElementById("auth-form")?.addEventListener("submit", handleAuthSubmit);
@@ -1681,7 +1597,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-home");
   });
 
-  // Screen 3: Home Search, GPS Refresh, Calculator Popup & Quick Actions
+  // Home Search, GPS, Map Preview & Calculator Popup
   const searchInput = document.getElementById("home-search-input");
   searchInput?.addEventListener("input", renderHomeDashboard);
 
@@ -1700,6 +1616,15 @@ document.addEventListener("DOMContentLoaded", () => {
     requestLiveGpsLocation(true);
   });
 
+  document.getElementById("btn-home-open-full-map")?.addEventListener("click", () => {
+    showScreen("screen-explore");
+  });
+
+  document.getElementById("btn-home-open-filters")?.addEventListener("click", () => {
+    filtersPreviousScreenId = "screen-home";
+    showScreen("screen-filters");
+  });
+
   document.getElementById("btn-home-calculator")?.addEventListener("click", () => {
     openCalculatorModal();
   });
@@ -1709,9 +1634,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("calculator-modal")?.addEventListener("click", (e) => {
-    if (e.target.id === "calculator-modal") {
-      closeCalculatorModal();
-    }
+    if (e.target.id === "calculator-modal") closeCalculatorModal();
   });
 
   document.getElementById("calc-station-select")?.addEventListener("change", (e) => {
@@ -1730,25 +1653,26 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-quick-map")?.addEventListener("click", () => {
     showScreen("screen-explore");
   });
+
   document.getElementById("btn-quick-vehicle")?.addEventListener("click", () => {
     vehiclePreviousScreenId = "screen-home";
     showScreen("screen-vehicle");
   });
+
   document.getElementById("btn-quick-bookings")?.addEventListener("click", () => {
     showScreen("screen-bookings");
   });
 
-  // Screen 5: Station Details Back & Book Now
+  // Station Details
   document.getElementById("btn-back-from-details")?.addEventListener("click", () => {
     showScreen(previousScreenId || "screen-home");
   });
 
   document.getElementById("btn-detail-book-now")?.addEventListener("click", () => {
-    if (!selectedStationId) return;
-    openSlotBooking(selectedStationId);
+    if (selectedStationId) openSlotBooking(selectedStationId);
   });
 
-  // Screens 11, 12 & 13: Slot Booking & Simulated Advance Payment
+  // Booking & 20% Advance Payment
   document.getElementById("btn-back-from-booking")?.addEventListener("click", () => {
     showScreen(bookingPreviousScreenId || "screen-station-details");
   });
@@ -1767,12 +1691,11 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-bookings");
   });
 
-  // Screen 14: Bookings History Back
+  // Bookings History & Profile
   document.getElementById("btn-back-from-bookings")?.addEventListener("click", () => {
     showScreen("screen-home");
   });
 
-  // Screen 15: Profile Reset & Logout (no duplicate calculator button here)
   document.getElementById("btn-back-from-profile")?.addEventListener("click", () => {
     showScreen("screen-home");
   });
@@ -1785,7 +1708,7 @@ document.addEventListener("DOMContentLoaded", () => {
     handleLogoutDriver();
   });
 
-  // Screen 6: EV Vehicle Profile
+  // Vehicle Profile
   document.getElementById("btn-back-from-vehicle")?.addEventListener("click", () => {
     showScreen(vehiclePreviousScreenId || "screen-home");
   });
@@ -1802,10 +1725,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const setMsg = (txt, isErr = false) => {
       if (!statusMsg) return;
       statusMsg.textContent = txt;
-      statusMsg.style.color = isErr ? "#F87171" : "#16C784";
+      statusMsg.style.color = isErr ? "#E45B64" : "#16C784";
     };
 
-    if (!rawName) return setMsg("Please enter a vehicle name.", true);
+    if (!rawName) return setMsg("Please enter a vehicle model.", true);
     if (!Number.isFinite(capacity) || capacity <= 0 || capacity > 300) {
       return setMsg("Battery capacity must be between 1 and 300 kWh.", true);
     }
@@ -1827,19 +1750,18 @@ document.addEventListener("DOMContentLoaded", () => {
       connector
     };
 
-    if (saveVehicleToStorage(updatedVehicle)) {
-      setMsg("EV profile saved to LocalStorage!");
-    } else {
-      setMsg("Failed to save EV profile.", true);
-    }
+    setMsg(
+      saveVehicleToStorage(updatedVehicle)
+        ? "Vehicle profile saved!"
+        : "Failed to save vehicle profile.",
+      !saveVehicleToStorage(updatedVehicle)
+    );
   });
 
-  // Screen 7: Station Filters & Reset
+  // Filters
   document.getElementById("btn-open-filters")?.addEventListener("click", () => {
     const active = document.querySelector(".screen.active");
-    if (active && active.id !== "screen-filters") {
-      filtersPreviousScreenId = active.id;
-    }
+    if (active && active.id !== "screen-filters") filtersPreviousScreenId = active.id;
     showScreen("screen-filters");
   });
 
@@ -1856,22 +1778,18 @@ document.addEventListener("DOMContentLoaded", () => {
     resetStationFilters();
   });
 
-  // Live Calculator Modal Input Listeners
+  // Live Calculator Modal Inputs
   ["calc-capacity", "calc-current-soc", "calc-target-soc", "calc-power", "calc-price"].forEach(
     (id) => {
       document.getElementById(id)?.addEventListener("input", runAndRenderCalculator);
     }
   );
 
-  // Bottom Navigation Bar
+  // Bottom Navigation
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.addEventListener("click", () => {
       const targetScreen = item.dataset.target;
-      if (document.getElementById(targetScreen)) {
-        showScreen(targetScreen);
-      } else {
-        showScreen("screen-home");
-      }
+      showScreen(document.getElementById(targetScreen) ? targetScreen : "screen-home");
     });
   });
 });
