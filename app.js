@@ -1,5 +1,5 @@
 // =========================================
-// GoEV CORE APPLICATION LOGIC (SCREENS 1–13)
+// GoEV CORE APPLICATION LOGIC (SCREENS 1–15)
 // =========================================
 
 let isSignupMode = false;
@@ -89,16 +89,20 @@ function getBookingsFromStorage() {
   }
 }
 
-function saveBookingToStorage(bookingObj) {
-  const existing = getBookingsFromStorage();
-  existing.unshift(bookingObj);
+function saveBookingsArrayToStorage(bookingsArr) {
   try {
-    localStorage.setItem("goev_bookings", JSON.stringify(existing));
+    localStorage.setItem("goev_bookings", JSON.stringify(bookingsArr));
     return true;
   } catch (err) {
     console.error("Failed to save goev_bookings:", err);
     return false;
   }
+}
+
+function saveBookingToStorage(bookingObj) {
+  const existing = getBookingsFromStorage();
+  existing.unshift(bookingObj);
+  return saveBookingsArrayToStorage(existing);
 }
 
 function getVehicle() {
@@ -174,6 +178,26 @@ function refreshStationAggregateStatus(station) {
     station.status = "Occupied";
   } else {
     station.status = "Unavailable";
+  }
+}
+
+function releaseReservedPort(stationId, portId) {
+  if (!stationId || !portId) return;
+  const stations = getStations();
+  const sIdx = stations.findIndex((s) => String(s.id) === String(stationId));
+  if (sIdx === -1) return;
+
+  const station = stations[sIdx];
+  if (!Array.isArray(station.ports)) return;
+
+  const pIdx = station.ports.findIndex(
+    (p, idx) => String(p.id || `Port-${idx + 1}`) === String(portId)
+  );
+  if (pIdx !== -1 && normalizePortStatus(station.ports[pIdx].status) === "Reserved") {
+    station.ports[pIdx].status = "Available";
+    refreshStationAggregateStatus(station);
+    stations[sIdx] = station;
+    saveStationsToStorage(stations);
   }
 }
 
@@ -540,7 +564,6 @@ function getTodayDateString() {
 
 function updatePaymentSimulationBreakdown(estimatedCost) {
   const totalCost = Math.max(0, Number(estimatedCost) || 0);
-  // 20% Advance = Estimated Cost * 20 / 100
   const advanceAmount = Math.round((totalCost * 20) / 100);
   const remainingAmount = Math.max(0, totalCost - advanceAmount);
 
@@ -600,7 +623,6 @@ function renderBookingPortSelector(station, vehicleConnector) {
     })
     .join("");
 
-  // Fallback to first available port even if connector differs
   if (!selectedBookingPortId) {
     const firstOpen = ports.find((p) => normalizePortStatus(p.status) === "Available");
     if (firstOpen) {
@@ -691,7 +713,6 @@ function openSlotBooking(stationId = null) {
 
   renderBookingTimeSlots();
 
-  // Hide previous confirmation card when starting a new slot selection
   const confirmCard = document.getElementById("booking-confirmation-card");
   if (confirmCard) confirmCard.classList.add("hidden");
 
@@ -759,7 +780,6 @@ function handleSimulateAdvancePayment() {
     email: "demo@goev.app"
   };
 
-  // Mark port as Reserved in goev_stations
   station.ports[portIndex].status = "Reserved";
   refreshStationAggregateStatus(station);
   stations[stationIndex] = station;
@@ -781,19 +801,17 @@ function handleSimulateAdvancePayment() {
     totalEstimatedCost: totalCost,
     advancePaidSimulated: advanceAmount,
     remainingBalanceSimulated: remainingAmount,
-    status: "Confirmed (Simulated 20% Advance)",
+    status: "Reserved",
     driverName: user.name,
     createdAt: new Date().toISOString()
   };
 
   saveBookingToStorage(bookingRecord);
 
-  // Refresh port selector so the newly reserved port shows Reserved
   renderBookingPortSelector(station, vehicle.connector);
   const payBtn = document.getElementById("btn-simulate-payment");
   if (payBtn) payBtn.disabled = !selectedBookingPortId;
 
-  // Render Screen 13 Confirmation Card
   const confirmCard = document.getElementById("booking-confirmation-card");
   if (confirmCard) {
     confirmCard.classList.remove("hidden");
@@ -813,6 +831,147 @@ function handleSimulateAdvancePayment() {
   }
 
   renderIcons();
+}
+
+// =========================================
+// SCREEN 14: BOOKINGS HISTORY & MANAGEMENT
+// =========================================
+function updateBookingStatus(bookingId, newStatus) {
+  const bookings = getBookingsFromStorage();
+  const idx = bookings.findIndex((b) => b.bookingId === bookingId);
+  if (idx === -1) return;
+
+  const target = bookings[idx];
+  const prevStatus = target.status;
+  target.status = newStatus;
+  bookings[idx] = target;
+  saveBookingsArrayToStorage(bookings);
+
+  if (prevStatus === "Reserved" && (newStatus === "Cancelled" || newStatus === "Completed")) {
+    releaseReservedPort(target.stationId, target.portId);
+  }
+
+  renderBookingsScreen();
+}
+
+function renderBookingsScreen() {
+  const listEl = document.getElementById("bookings-history-list");
+  const countEl = document.getElementById("bookings-count-label");
+  const bookings = getBookingsFromStorage();
+
+  if (countEl) {
+    countEl.textContent = `${bookings.length} booking${bookings.length === 1 ? "" : "s"}`;
+  }
+
+  if (!listEl) return;
+
+  if (bookings.length === 0) {
+    listEl.innerHTML = `
+      <div class="booking-history-card">
+        <h4 class="port-item-title">No Slot Bookings Yet</h4>
+        <p class="muted-text" style="margin-top:4px;">
+          Open any charging station, tap <strong>Book Charging Slot</strong>, and simulate a 20% advance payment to see your booking here.
+        </p>
+      </div>
+    `;
+    renderIcons();
+    return;
+  }
+
+  listEl.innerHTML = bookings
+    .map((b) => {
+      const status = b.status || "Reserved";
+      const badgeClass =
+        status === "Reserved"
+          ? "status-pill--reserved"
+          : status === "Completed"
+          ? "status-pill--available"
+          : "status-pill--occupied";
+
+      const isActiveReservation = status === "Reserved";
+
+      return `
+        <article class="booking-history-card">
+          <div class="detail-top-row" style="margin-bottom:8px;">
+            <div>
+              <span class="booking-id-badge">${b.bookingId}</span>
+              <h4 class="port-item-title">${b.stationName}</h4>
+              <p class="muted-text">${b.portId} • ${b.connector || "CCS2"} • ${b.date} • ${b.timeSlot}</p>
+            </div>
+            <span class="status-pill ${badgeClass}">${status}</span>
+          </div>
+
+          <div class="booking-kv-grid">
+            <div>
+              <span class="meta-label">Vehicle &amp; Est.</span>
+              <strong class="meta-value">${b.vehicleName} (${b.energyKwh} kWh)</strong>
+            </div>
+            <div>
+              <span class="meta-label">20% Advance / 80% Due</span>
+              <strong class="meta-value highlight-green">₹${b.advancePaidSimulated} / ₹${b.remainingBalanceSimulated}</strong>
+            </div>
+          </div>
+
+          ${
+            isActiveReservation
+              ? `<div class="booking-card-actions">
+                  <button type="button" class="btn-sm-teal" onclick="updateBookingStatus('${b.bookingId}', 'Completed')">Complete &amp; Free Port</button>
+                  <button type="button" class="btn-danger-ghost" onclick="updateBookingStatus('${b.bookingId}', 'Cancelled')">Cancel Slot</button>
+                </div>`
+              : `<p class="muted-text" style="margin-top:10px;">Port status released back to station pool.</p>`
+          }
+        </article>
+      `;
+    })
+    .join("");
+
+  renderIcons();
+}
+
+// =========================================
+// SCREEN 15: DRIVER PROFILE & DATA CONTROLS
+// =========================================
+function renderProfileScreen() {
+  const user = JSON.parse(localStorage.getItem("goev_user")) || {
+    name: "Demo EV Driver",
+    email: "demo@goev.app"
+  };
+  const vehicle = getVehicle();
+  const bookings = getBookingsFromStorage();
+
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  setText("profile-driver-name", user.name || "EV Driver");
+  setText("profile-driver-email", user.email || "demo@goev.app");
+  setText("profile-vehicle-summary", `${vehicle.name} • ${vehicle.capacity} kWh • ${vehicle.connector}`);
+  setText("profile-soc-summary", `${vehicle.currentSoc}% → ${vehicle.targetSoc}% target`);
+  setText("profile-bookings-count", `${bookings.length} recorded`);
+
+  const msgEl = document.getElementById("profile-action-msg");
+  if (msgEl) msgEl.textContent = "";
+
+  renderIcons();
+}
+
+function handleResetSampleStations() {
+  if (typeof INITIAL_STATIONS !== "undefined") {
+    saveStationsToStorage(JSON.parse(JSON.stringify(INITIAL_STATIONS)));
+    activeStationFilters = { ...DEFAULT_FILTER_STATE };
+    const msgEl = document.getElementById("profile-action-msg");
+    if (msgEl) {
+      msgEl.textContent = "Sample charging stations & filters reset to initial state.";
+      msgEl.style.color = "#16C784";
+    }
+  }
+}
+
+function handleLogoutDriver() {
+  localStorage.removeItem("goev_user");
+  setAuthMode(false);
+  showScreen("screen-auth");
 }
 
 // =========================================
@@ -1170,6 +1329,10 @@ function showScreen(screenId) {
   } else if (screenId === "screen-calculator") {
     fillCalculatorFromVehicleAndStation();
     runAndRenderCalculator();
+  } else if (screenId === "screen-bookings") {
+    renderBookingsScreen();
+  } else if (screenId === "screen-profile") {
+    renderProfileScreen();
   }
 
   setActiveNav(screenId);
@@ -1263,6 +1426,7 @@ window.openStationDetails = openStationDetails;
 window.openCalculatorScreen = openCalculatorScreen;
 window.openSlotBooking = openSlotBooking;
 window.calculateChargingEstimate = calculateChargingEstimate;
+window.updateBookingStatus = updateBookingStatus;
 
 // =========================================
 // INITIALIZATION & EVENT LISTENERS
@@ -1314,11 +1478,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showScreen("screen-vehicle");
   });
   document.getElementById("btn-quick-bookings")?.addEventListener("click", () => {
-    if (document.getElementById("screen-bookings")) {
-      showScreen("screen-bookings");
-    } else {
-      alert("Bookings History (Screen 14) is coming next!");
-    }
+    showScreen("screen-bookings");
   });
 
   // Screen 5: Station Details Back & Book Now
@@ -1344,6 +1504,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-simulate-payment")?.addEventListener("click", () => {
     handleSimulateAdvancePayment();
+  });
+
+  document.getElementById("btn-conf-view-bookings")?.addEventListener("click", () => {
+    showScreen("screen-bookings");
+  });
+
+  // Screen 14: Bookings History Back
+  document.getElementById("btn-back-from-bookings")?.addEventListener("click", () => {
+    showScreen("screen-home");
+  });
+
+  // Screen 15: Profile, Calculator Shortcut, Reset & Logout
+  document.getElementById("btn-back-from-profile")?.addEventListener("click", () => {
+    showScreen("screen-home");
+  });
+
+  document.getElementById("btn-open-calculator-from-profile")?.addEventListener("click", () => {
+    openCalculatorScreen();
+  });
+
+  document.getElementById("btn-reset-sample-stations")?.addEventListener("click", () => {
+    handleResetSampleStations();
+  });
+
+  document.getElementById("btn-logout-driver")?.addEventListener("click", () => {
+    handleLogoutDriver();
   });
 
   // Screen 6: EV Vehicle Profile
