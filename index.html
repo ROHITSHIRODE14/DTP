@@ -52,7 +52,7 @@
       </div>
     </section>
 
-    <!-- 2. LOGIN / REGISTRATION SCREEN -->
+    <!-- 2. LOGIN / REGISTRATION + 6-DIGIT OTP VERIFICATION SCREEN -->
     <section id="screen-auth" class="screen auth-screen">
       <div class="auth-header">
         <div class="auth-logo-row">
@@ -64,7 +64,7 @@
             <p class="auth-tagline">Find. Charge. Go.</p>
           </div>
         </div>
-        <p class="auth-subtitle">Sign in or register to locate nearby chargers, estimate session cost, and reserve ports.</p>
+        <p class="auth-subtitle">Sign in or register with 6-digit OTP verification to manage your EV and bookings.</p>
       </div>
 
       <div class="auth-card">
@@ -73,29 +73,70 @@
           <button type="button" id="tab-signup" class="auth-tab">Register</button>
         </div>
 
-        <form id="auth-form" class="auth-form">
+        <!-- Step 1: Credentials Form -->
+        <form id="auth-form" class="auth-form" novalidate>
           <div id="field-name-group" class="form-group hidden">
             <label for="auth-name">Full Name</label>
             <input type="text" id="auth-name" placeholder="Enter your full name" />
           </div>
 
           <div class="form-group">
-            <label for="auth-email">Email Address</label>
-            <input type="email" id="auth-email" placeholder="driver@goev.app" required />
+            <label for="auth-email">Email or Phone</label>
+            <input type="text" id="auth-email" placeholder="driver@goev.app or +91 98765 43210" required />
           </div>
 
           <div class="form-group">
             <label for="auth-password">Password</label>
-            <input type="password" id="auth-password" placeholder="Enter password" required />
+            <input type="password" id="auth-password" placeholder="Enter password (min 4 chars)" required />
           </div>
 
           <p id="auth-message" class="auth-message"></p>
 
           <button type="submit" id="btn-auth-submit" class="btn-primary">
-            <span id="btn-auth-label">Login</span>
-            <i data-lucide="arrow-right"></i>
+            <span id="btn-auth-label">Send OTP &amp; Login</span>
+            <i data-lucide="shield-check"></i>
           </button>
         </form>
+
+        <!-- Step 2: Real 6-Digit OTP Verification Panel -->
+        <div id="otp-verification-panel" class="otp-panel hidden">
+          <div class="otp-header-row">
+            <h4>Verify 6-Digit OTP</h4>
+            <button type="button" id="btn-otp-change-creds" class="link-action-btn">Edit Details</button>
+          </div>
+          <p id="otp-target-label" class="card-subtitle" style="margin-bottom:8px;">OTP sent to your account</p>
+
+          <div id="otp-dev-code-box" class="otp-code-banner">
+            <span>Prototype OTP Code:</span>
+            <strong id="otp-generated-code">------</strong>
+          </div>
+
+          <form id="otp-form" novalidate>
+            <div class="form-group">
+              <label for="otp-input">Enter 6-Digit OTP</label>
+              <input
+                type="text"
+                id="otp-input"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                placeholder="000000"
+                required
+              />
+            </div>
+
+            <p id="otp-message" class="auth-message"></p>
+
+            <div class="otp-actions-row">
+              <button type="button" id="btn-resend-otp" class="btn-outline" style="height:42px;">
+                <span>Resend OTP</span>
+              </button>
+              <button type="submit" id="btn-verify-otp" class="btn-primary" style="height:42px;">
+                <span>Verify &amp; Enter</span>
+              </button>
+            </div>
+          </form>
+        </div>
 
         <div class="divider"><span>OR</span></div>
 
@@ -106,7 +147,7 @@
         <div class="auth-note">
           <i data-lucide="info"></i>
           <small>
-            <strong>Local Persistence:</strong> Driver profile, EV specs, live GPS distance state, and slot bookings are saved locally in your browser.
+            <strong>OTP Note:</strong> OTPs are generated locally in the browser for this prototype and displayed above for instant verification.
           </small>
         </div>
       </div>
@@ -151,7 +192,7 @@
       </div>
 
       <div class="home-body">
-        <!-- 4 Unique Quick Actions (Calculator Modal triggered here) -->
+        <!-- 4 Unique Quick Actions: Map opens dedicated Real-Time Map screen -->
         <div class="quick-actions-grid">
           <button type="button" id="btn-quick-map" class="quick-action-btn">
             <div class="qa-icon teal-bg"><i data-lucide="map"></i></div>
@@ -175,12 +216,12 @@
         <div class="section-block">
           <div class="section-heading-row">
             <h3>Nearby Map Preview</h3>
-            <button type="button" id="btn-home-open-full-map" class="link-action-btn">Full Map</button>
+            <button type="button" id="btn-home-open-full-map" class="link-action-btn">Real-Time Map</button>
           </div>
           <div class="home-map-preview-card">
             <div id="goev-home-preview-map" class="home-preview-map"></div>
             <div class="preview-map-footer">
-              <span id="home-preview-summary" class="muted-count">Tap pins or open full map</span>
+              <span id="home-preview-summary" class="muted-count">Tap pins or open Real-Time Map</span>
               <button type="button" id="btn-home-open-filters" class="btn-chip-outline">
                 <i data-lucide="sliders-horizontal"></i>
                 <span>Filters</span>
@@ -209,15 +250,16 @@
       </div>
     </section>
 
-    <!-- 4. NEARBY CHARGING STATIONS MAP (EXPLORE) -->
-    <section id="screen-explore" class="screen explore-screen">
+    <!-- DEDICATED REAL-TIME MAP SCREEN (OPENED BY MAP BUTTON) -->
+    <section id="screen-live-map" class="screen live-map-screen" aria-label="Real-Time GPS Map">
       <div class="subscreen-header">
         <div>
-          <h2>Nearby Stations Map</h2>
-          <p id="explore-gps-subtitle" class="subscreen-subtitle">Acquiring live GPS...</p>
+          <h2>Real-Time GPS Map</h2>
+          <p id="livemap-gps-subtitle" class="subscreen-subtitle">Streaming live GPS &amp; station telemetry...</p>
         </div>
         <div class="header-actions-inline">
-          <button type="button" id="btn-refresh-gps-explore" class="btn-gps-refresh">GPS</button>
+          <button type="button" id="btn-refresh-gps-livemap" class="btn-gps-refresh">Re-Center</button>
+          <button type="button" id="btn-livemap-to-explore" class="btn-sm-teal">List View</button>
         </div>
       </div>
 
@@ -228,24 +270,50 @@
         <span class="legend-item"><i class="dot dot-grey"></i>Unavailable</span>
       </div>
 
-      <div class="map-container-wrap">
-        <div id="goev-map" class="goev-map"></div>
-        <div id="map-fallback-box" class="map-fallback-box hidden">
-          <div class="fallback-title">Offline / Fallback Station Grid</div>
-          <p class="fallback-desc">Map tiles require network access. Select a station pin below to inspect.</p>
-          <div id="fallback-pins" class="fallback-pins"></div>
+      <div class="livemap-canvas-wrap">
+        <div id="goev-realtime-map" class="goev-map"></div>
+        <div id="livemap-fallback-box" class="map-fallback-box hidden">
+          <div class="fallback-title">Offline / Fallback Real-Time Pin Grid</div>
+          <p class="fallback-desc">Map tiles require network access. Tap a station below to open details.</p>
+          <div id="livemap-fallback-pins" class="fallback-pins"></div>
         </div>
 
-        <!-- Floating Filter Button on Map -->
-        <button type="button" id="btn-open-filters" class="floating-filter-btn" aria-label="Filter Stations">
+        <button type="button" id="btn-livemap-filters" class="floating-filter-btn" aria-label="Filter Stations">
           <i data-lucide="sliders-horizontal"></i>
           <span>Filters</span>
         </button>
       </div>
 
+      <div class="livemap-telemetry-bar">
+        <div>
+          <span class="muted-count">Active Telemetry Tick</span>
+          <strong id="livemap-tick-label" class="livemap-tick-val">Syncing...</strong>
+        </div>
+        <button type="button" id="btn-livemap-simulate-pulse" class="btn-chip-outline">
+          <i data-lucide="refresh-cw"></i>
+          <span>Refresh Telemetry</span>
+        </button>
+      </div>
+
+      <div id="livemap-selected-station-card" class="livemap-bottom-sheet"></div>
+    </section>
+
+    <!-- 4. NEARBY CHARGING STATIONS DIRECTORY (EXPLORE) -->
+    <section id="screen-explore" class="screen explore-screen">
+      <div class="subscreen-header">
+        <div>
+          <h2>Stations Directory</h2>
+          <p id="explore-gps-subtitle" class="subscreen-subtitle">Acquiring live GPS...</p>
+        </div>
+        <div class="header-actions-inline">
+          <button type="button" id="btn-explore-to-livemap" class="btn-gps-refresh">Live Map</button>
+          <button type="button" id="btn-open-filters" class="btn-sm-teal">Filters</button>
+        </div>
+      </div>
+
       <div class="explore-list-section">
         <div class="section-heading-row">
-          <h3>Stations Near You</h3>
+          <h3>Stations Sorted by Live Distance</h3>
           <small id="explore-station-count" class="muted-count">0 stations</small>
         </div>
         <div id="explore-stations-list" class="station-cards-list"></div>
@@ -620,10 +688,15 @@
 
       <div class="screen-body">
         <article class="surface-card">
-          <h3 id="profile-driver-name" class="card-title-lg">EV Driver</h3>
-          <p id="profile-driver-email" class="card-subtitle" style="margin-bottom:12px;">demo@goev.app</p>
+          <div class="detail-top-row" style="margin-bottom:6px;">
+            <div>
+              <h3 id="profile-driver-name" class="card-title-lg">EV Driver</h3>
+              <p id="profile-driver-email" class="card-subtitle">demo@goev.app</p>
+            </div>
+            <span id="profile-otp-badge" class="status-pill status-pill--available">OTP Verified</span>
+          </div>
 
-          <div class="detail-meta-grid" style="margin-bottom:0;">
+          <div class="detail-meta-grid" style="margin-top:10px;margin-bottom:0;">
             <div class="meta-box">
               <span class="meta-label">Vehicle</span>
               <strong id="profile-vehicle-summary" class="meta-value">Tata Nexon EV</strong>
@@ -783,9 +856,9 @@
         <i data-lucide="home"></i>
         <span>Home</span>
       </button>
-      <button type="button" class="nav-item" data-target="screen-explore">
-        <i data-lucide="compass"></i>
-        <span>Explore</span>
+      <button type="button" class="nav-item" data-target="screen-live-map">
+        <i data-lucide="map-pin"></i>
+        <span>Map</span>
       </button>
       <button type="button" class="nav-item" data-target="screen-vehicle">
         <i data-lucide="car"></i>
