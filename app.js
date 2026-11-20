@@ -1556,4 +1556,700 @@ function renderHomePreviewMap(stations) {
   }
   if (!mapEl || !window.L) return;
 
-  if (!go
+  if (!goevHomePreviewMap) {
+    goevHomePreviewMap = L.map("goev-home-preview-map", {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([liveCoords.lat, liveCoords.lng], 12);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18
+    }).addTo(goevHomePreviewMap);
+
+    previewMarkersLayer = L.layerGroup().addTo(goevHomePreviewMap);
+  }
+
+  previewMarkersLayer.clearLayers();
+
+  L.circleMarker([liveCoords.lat, liveCoords.lng], {
+    radius: 6,
+    fillColor: "#16A6A0",
+    color: "#FFFFFF",
+    weight: 2,
+    fillOpacity: 1
+  }).addTo(previewMarkersLayer);
+
+  stations.slice(0, 8).forEach((station) => {
+    const marker = L.circleMarker([station.lat, station.lng], {
+      radius: 7,
+      fillColor: getMarkerColor(station.status),
+      color: "#101D2B",
+      weight: 1.5,
+      fillOpacity: 0.95
+    });
+    marker.on("click", () => openStationDetails(station.id));
+    marker.addTo(previewMarkersLayer);
+  });
+
+  setTimeout(() => {
+    goevHomePreviewMap?.invalidateSize();
+  }, 150);
+}
+
+function renderRealtimeMapScreen() {
+  const stations = getFilteredStations().sort(
+    (a, b) => getStationDistanceKm(a) - getStationDistanceKm(b)
+  );
+
+  const tickEl = document.getElementById("livemap-tick-label");
+  if (tickEl) {
+    tickEl.textContent = `${new Date().toLocaleTimeString()} • ${stations.length} live nodes`;
+  }
+
+  const mapEl = document.getElementById("goev-realtime-map");
+  const fallbackBox = document.getElementById("livemap-fallback-box");
+  const fallbackPins = document.getElementById("livemap-fallback-pins");
+
+  if (!mapEl || !window.L) {
+    fallbackBox?.classList.remove("hidden");
+    if (fallbackPins) {
+      fallbackPins.innerHTML = stations
+        .map(
+          (s) =>
+            `<button type="button" class="fallback-pin-btn" style="background:${getMarkerColor(s.status)}" onclick="openStationDetails('${s.id}')">${s.name} (${getStationDistanceKm(s)}km)</button>`
+        )
+        .join("");
+    }
+  } else {
+    if (!goevRealtimeMap) {
+      goevRealtimeMap = L.map("goev-realtime-map").setView([liveCoords.lat, liveCoords.lng], 13);
+      const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      });
+      tileLayer.on("tileerror", () => fallbackBox?.classList.remove("hidden"));
+      tileLayer.addTo(goevRealtimeMap);
+      realtimeMarkersLayer = L.layerGroup().addTo(goevRealtimeMap);
+    }
+
+    if (!navigator.onLine) fallbackBox?.classList.remove("hidden");
+    else fallbackBox?.classList.add("hidden");
+
+    if (fallbackPins) {
+      fallbackPins.innerHTML = stations
+        .map(
+          (s) =>
+            `<button type="button" class="fallback-pin-btn" style="background:${getMarkerColor(s.status)}" onclick="openStationDetails('${s.id}')">${s.name}</button>`
+        )
+        .join("");
+    }
+
+    realtimeMarkersLayer.clearLayers();
+
+    L.circleMarker([liveCoords.lat, liveCoords.lng], {
+      radius: 8,
+      fillColor: "#16A6A0",
+      color: "#FFFFFF",
+      weight: 2.5,
+      fillOpacity: 1
+    })
+      .bindPopup(
+        `<strong>${liveCoords.isLiveGps ? "Live GPS Position" : "Reference Position"}</strong><br/>${liveCoords.lat.toFixed(4)}, ${liveCoords.lng.toFixed(4)}`
+      )
+      .addTo(realtimeMarkersLayer);
+
+    stations.forEach((station) => {
+      const availPorts = getAvailablePortCount(station);
+      const distKm = getStationDistanceKm(station);
+
+      const marker = L.circleMarker([station.lat, station.lng], {
+        radius: 9,
+        fillColor: getMarkerColor(station.status),
+        color: "#101D2B",
+        weight: 2,
+        fillOpacity: 0.95
+      });
+
+      marker.bindPopup(`
+        <div>
+          <strong>${station.name}</strong><br/>
+          Distance: ${distKm} km<br/>
+          Connector: ${station.connector} • ${station.power} kW<br/>
+          Tariff: ₹${station.pricePerKwh}/kWh<br/>
+          Available: ${availPorts}/${station.ports.length} ports<br/>
+          <button type="button" onclick="openStationDetails('${station.id}')" style="margin-top:6px;padding:4px 8px;background:#16C784;color:#101D2B;border:none;border-radius:6px;font-weight:700;cursor:pointer;">View Details</button>
+        </div>
+      `);
+
+      marker.addTo(realtimeMarkersLayer);
+    });
+
+    setTimeout(() => {
+      goevRealtimeMap?.invalidateSize();
+    }, 150);
+  }
+
+  const bottomCardEl = document.getElementById("livemap-selected-station-card");
+  if (bottomCardEl) {
+    const featured =
+      stations.find((s) => String(s.id) === String(selectedStationId)) || stations[0];
+    bottomCardEl.innerHTML = featured
+      ? renderStationCardHtml(featured, "ports free now")
+      : `<div class="station-card"><p class="muted-count">No stations match your active filters.</p></div>`;
+  }
+
+  renderIcons();
+}
+
+function renderExploreScreen() {
+  const stations = getFilteredStations().sort(
+    (a, b) => getStationDistanceKm(a) - getStationDistanceKm(b)
+  );
+  const countEl = document.getElementById("explore-station-count");
+  if (countEl) countEl.textContent = `${stations.length} stations`;
+
+  const listEl = document.getElementById("explore-stations-list");
+  if (listEl) {
+    listEl.innerHTML =
+      stations.length === 0
+        ? `<div class="station-card"><p class="muted-count">No stations match your active filters.</p></div>`
+        : stations.map((s) => renderStationCardHtml(s, "ports available")).join("");
+  }
+
+  renderIcons();
+}
+
+// =========================================
+// HOME DASHBOARD RENDERER
+// =========================================
+function renderHomeDashboard() {
+  const user = getCurrentSessionUser();
+  const nameEl = document.getElementById("home-user-name");
+  if (nameEl) nameEl.textContent = user && user.name ? user.name : "EV Driver";
+
+  const vehicle = getVehicle();
+  const allStations = getStations();
+  const filteredStations = getFilteredStations().sort(
+    (a, b) => getStationDistanceKm(a) - getStationDistanceKm(b)
+  );
+  const searchQuery = (document.getElementById("home-search-input")?.value || "")
+    .trim()
+    .toLowerCase();
+
+  renderHomePreviewMap(filteredStations);
+
+  const recContainer = document.getElementById("home-recommended-card");
+  const topPick = getRecommendedStationRuleBased(filteredStations);
+  if (recContainer) {
+    if (topPick) {
+      const { station, score, distKm, reasons } = topPick;
+      const estimate = computeStationEstimate(station, vehicle);
+      recContainer.innerHTML = `
+        <span class="rec-badge">Rule-Based Pick • ${score}/100</span>
+        <h4 class="rec-title">${station.name}</h4>
+        <p class="rec-specs">${distKm} km • ${station.connector} • ${station.power} kW • ₹${station.pricePerKwh}/kWh</p>
+        <ul class="rec-reasons-list">
+          ${reasons.slice(0, 3).map((r) => `<li>${r}</li>`).join("")}
+        </ul>
+        <div class="rec-card-footer">
+          <span class="rec-specs">Est. Cost: <strong>₹${estimate.estimatedCost}</strong> (${estimate.energyKwh} kWh)</span>
+          <button type="button" class="btn-sm-teal" onclick="openStationDetails('${station.id}')">View Details</button>
+        </div>
+      `;
+    } else {
+      recContainer.innerHTML = `<p class="rec-specs">No stations match your active filters.</p>`;
+    }
+  }
+
+  const searched = filteredStations.filter((s) => {
+    if (!searchQuery) return true;
+    return (
+      s.name.toLowerCase().includes(searchQuery) ||
+      s.connector.toLowerCase().includes(searchQuery) ||
+      (s.address || "").toLowerCase().includes(searchQuery)
+    );
+  });
+
+  const countEl = document.getElementById("home-station-count");
+  if (countEl) countEl.textContent = `${searched.length} of ${allStations.length}`;
+
+  const listEl = document.getElementById("home-stations-list");
+  if (listEl) {
+    listEl.innerHTML =
+      searched.length === 0
+        ? `<div class="station-card"><p class="muted-count">No matching charging stations found.</p></div>`
+        : searched.map((s) => renderStationCardHtml(s, "ports free")).join("");
+  }
+
+  renderIcons();
+}
+
+// =========================================
+// NAVIGATION & REAL 6-DIGIT OTP AUTH SYSTEM
+// =========================================
+function showScreen(screenId) {
+  document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
+
+  const target = document.getElementById(screenId);
+  if (target) target.classList.add("active");
+
+  const bottomNav = document.getElementById("bottom-nav");
+  if (bottomNav) {
+    const hideNav = screenId === "screen-splash" || screenId === "screen-auth";
+    bottomNav.classList.toggle("hidden", hideNav);
+  }
+
+  if (screenId === "screen-home") renderHomeDashboard();
+  else if (screenId === "screen-live-map") renderRealtimeMapScreen();
+  else if (screenId === "screen-explore") renderExploreScreen();
+  else if (screenId === "screen-vehicle") renderVehicleScreen();
+  else if (screenId === "screen-filters") syncFilterInputsFromState();
+  else if (screenId === "screen-bookings") renderBookingsScreen();
+  else if (screenId === "screen-profile") renderProfileScreen();
+
+  setActiveNav(screenId);
+  renderIcons();
+}
+
+function resetAuthToCredentialsStep() {
+  document.getElementById("auth-form")?.classList.remove("hidden");
+  document.getElementById("otp-verification-panel")?.classList.add("hidden");
+  const otpInput = document.getElementById("otp-input");
+  if (otpInput) otpInput.value = "";
+  const otpMsg = document.getElementById("otp-message");
+  if (otpMsg) {
+    otpMsg.textContent = "";
+    otpMsg.className = "auth-message";
+  }
+}
+
+function setAuthMode(signup) {
+  isSignupMode = signup;
+  pendingAuthPayload = null;
+  generatedOtpCode = null;
+  resetAuthToCredentialsStep();
+
+  document.getElementById("tab-login")?.classList.toggle("active", !signup);
+  document.getElementById("tab-signup")?.classList.toggle("active", signup);
+  document.getElementById("field-name-group")?.classList.toggle("hidden", !signup);
+
+  const submitLabel = document.getElementById("btn-auth-label");
+  if (submitLabel) submitLabel.textContent = signup ? "Send OTP & Register" : "Send OTP & Login";
+
+  const msgEl = document.getElementById("auth-message");
+  if (msgEl) {
+    msgEl.textContent = "";
+    msgEl.className = "auth-message";
+  }
+}
+
+function generateSixDigitOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function showOtpPanelForPayload(payload) {
+  generatedOtpCode = generateSixDigitOtp();
+  pendingAuthPayload = { ...payload, otp: generatedOtpCode, issuedAt: Date.now() };
+
+  document.getElementById("auth-form")?.classList.add("hidden");
+  document.getElementById("otp-verification-panel")?.classList.remove("hidden");
+
+  const targetEl = document.getElementById("otp-target-label");
+  if (targetEl) {
+    targetEl.textContent = `6-digit code generated for ${payload.email}`;
+  }
+
+  const codeEl = document.getElementById("otp-generated-code");
+  if (codeEl) {
+    codeEl.textContent = generatedOtpCode;
+  }
+
+  const otpInput = document.getElementById("otp-input");
+  if (otpInput) {
+    otpInput.value = "";
+    otpInput.focus();
+  }
+
+  const otpMsg = document.getElementById("otp-message");
+  if (otpMsg) {
+    otpMsg.textContent = "Enter the 6-digit OTP above to complete verification.";
+    otpMsg.className = "auth-message success";
+  }
+}
+
+function handleAuthSubmit(event) {
+  event.preventDefault();
+
+  const nameInput = document.getElementById("auth-name")?.value.trim() || "";
+  const emailInput = document.getElementById("auth-email")?.value.trim() || "";
+  const passwordInput = document.getElementById("auth-password")?.value || "";
+  const msgEl = document.getElementById("auth-message");
+
+  const setErr = (txt) => {
+    if (msgEl) {
+      msgEl.textContent = txt;
+      msgEl.className = "auth-message error";
+    }
+  };
+
+  if (!emailInput || !passwordInput) return setErr("Please enter both email/phone and password.");
+  if (passwordInput.length < 4) return setErr("Password must be at least 4 characters.");
+  if (isSignupMode && !nameInput) return setErr("Please enter your full name to register.");
+
+  const users = getAllRegisteredUsers();
+
+  if (isSignupMode) {
+    if (users.some((u) => String(u.email || "").toLowerCase() === emailInput.toLowerCase())) {
+      return setErr("An account with this email/phone already exists. Switch to Login.");
+    }
+    showOtpPanelForPayload({
+      mode: "signup",
+      name: nameInput,
+      email: emailInput,
+      password: passwordInput
+    });
+  } else {
+    const matchedUser = users.find(
+      (u) => String(u.email || "").toLowerCase() === emailInput.toLowerCase() && u.password === passwordInput
+    );
+    if (!matchedUser) {
+      return setErr("Account not found or wrong password. Register first or use Demo Driver.");
+    }
+    showOtpPanelForPayload({
+      mode: "login",
+      name: matchedUser.name,
+      email: matchedUser.email
+    });
+  }
+}
+
+function handleOtpVerifySubmit(event) {
+  event.preventDefault();
+
+  const enteredOtp = (document.getElementById("otp-input")?.value || "").trim();
+  const otpMsg = document.getElementById("otp-message");
+
+  if (!pendingAuthPayload || !generatedOtpCode) {
+    if (otpMsg) {
+      otpMsg.textContent = "No active OTP session. Please submit credentials again.";
+      otpMsg.className = "auth-message error";
+    }
+    return;
+  }
+
+  if (enteredOtp.length !== 6 || enteredOtp !== generatedOtpCode) {
+    if (otpMsg) {
+      otpMsg.textContent = "Invalid 6-digit OTP. Please check the code and try again.";
+      otpMsg.className = "auth-message error";
+    }
+    return;
+  }
+
+  const users = getAllRegisteredUsers();
+
+  if (pendingAuthPayload.mode === "signup") {
+    users.push({
+      name: pendingAuthPayload.name,
+      email: pendingAuthPayload.email,
+      password: pendingAuthPayload.password,
+      vehicles: [{ ...DEFAULT_GOEV_VEHICLE }],
+      activeVehicleId: DEFAULT_GOEV_VEHICLE.id
+    });
+    saveAllRegisteredUsers(users);
+  }
+
+  localStorage.setItem(
+    "goev_user",
+    JSON.stringify({
+      name: pendingAuthPayload.name,
+      email: pendingAuthPayload.email,
+      otpVerified: true
+    })
+  );
+
+  // Hydrate account garage for the logged-in user
+  const accountGarage = getAccountVehicleState();
+  saveAccountVehicleState(accountGarage);
+
+  if (otpMsg) {
+    otpMsg.textContent = "OTP verified! Loading your account & EV garage...";
+    otpMsg.className = "auth-message success";
+  }
+
+  pendingAuthPayload = null;
+  generatedOtpCode = null;
+  setTimeout(() => showScreen("screen-home"), 300);
+}
+
+window.openStationDetails = openStationDetails;
+window.openCalculatorModal = openCalculatorModal;
+window.closeCalculatorModal = closeCalculatorModal;
+window.openSlotBooking = openSlotBooking;
+window.calculateChargingEstimate = calculateChargingEstimate;
+window.updateBookingStatus = updateBookingStatus;
+window.setActiveAccountVehicle = setActiveAccountVehicle;
+window.editAccountVehicle = editAccountVehicle;
+window.deleteAccountVehicle = deleteAccountVehicle;
+
+// =========================================
+// INITIALIZATION & EVENT LISTENERS
+// =========================================
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof initDatabase === "function") initDatabase();
+  const initialGarage = getAccountVehicleState();
+  saveAccountVehicleState(initialGarage);
+
+  renderIcons();
+  requestLiveGpsLocation(false);
+
+  telemetryTimerId = setInterval(() => {
+    const modal = document.getElementById("calculator-modal");
+    if (modal && !modal.classList.contains("hidden")) runAndRenderCalculator();
+
+    const bookingsScreen = document.getElementById("screen-bookings");
+    if (bookingsScreen && bookingsScreen.classList.contains("active")) renderBookingsScreen();
+
+    const liveMapScreen = document.getElementById("screen-live-map");
+    if (liveMapScreen && liveMapScreen.classList.contains("active")) {
+      const tickEl = document.getElementById("livemap-tick-label");
+      if (tickEl) {
+        const count = getFilteredStations().length;
+        tickEl.textContent = `${new Date().toLocaleTimeString()} • ${count} live nodes`;
+      }
+    }
+  }, 1000);
+
+  // Splash -> Auth
+  document.getElementById("btn-get-started")?.addEventListener("click", () => {
+    showScreen("screen-auth");
+  });
+
+  // Auth + OTP
+  document.getElementById("tab-login")?.addEventListener("click", () => setAuthMode(false));
+  document.getElementById("tab-signup")?.addEventListener("click", () => setAuthMode(true));
+  document.getElementById("auth-form")?.addEventListener("submit", handleAuthSubmit);
+  document.getElementById("otp-form")?.addEventListener("submit", handleOtpVerifySubmit);
+
+  document.getElementById("btn-resend-otp")?.addEventListener("click", () => {
+    if (!pendingAuthPayload) return;
+    showOtpPanelForPayload(pendingAuthPayload);
+  });
+
+  document.getElementById("btn-otp-change-creds")?.addEventListener("click", () => {
+    resetAuthToCredentialsStep();
+  });
+
+  document.getElementById("btn-continue-demo")?.addEventListener("click", () => {
+    localStorage.setItem(
+      "goev_user",
+      JSON.stringify({ name: "Demo EV Driver", email: "demo@goev.app", otpVerified: false })
+    );
+    const demoGarage = getAccountVehicleState();
+    saveAccountVehicleState(demoGarage);
+    showScreen("screen-home");
+  });
+
+  // Home Search, GPS, Real-Time Map & Calculator Popup
+  const searchInput = document.getElementById("home-search-input");
+  searchInput?.addEventListener("input", renderHomeDashboard);
+
+  document.getElementById("btn-home-search-clear")?.addEventListener("click", () => {
+    if (searchInput) {
+      searchInput.value = "";
+      renderHomeDashboard();
+    }
+  });
+
+  document.getElementById("btn-refresh-gps-home")?.addEventListener("click", () => {
+    requestLiveGpsLocation(true);
+  });
+
+  document.getElementById("btn-refresh-gps-livemap")?.addEventListener("click", () => {
+    requestLiveGpsLocation(true);
+  });
+
+  document.getElementById("btn-livemap-to-explore")?.addEventListener("click", () => {
+    showScreen("screen-explore");
+  });
+
+  document.getElementById("btn-explore-to-livemap")?.addEventListener("click", () => {
+    showScreen("screen-live-map");
+  });
+
+  document.getElementById("btn-livemap-simulate-pulse")?.addEventListener("click", () => {
+    requestLiveGpsLocation(false);
+    renderRealtimeMapScreen();
+  });
+
+  document.getElementById("btn-home-open-full-map")?.addEventListener("click", () => {
+    showScreen("screen-live-map");
+  });
+
+  document.getElementById("btn-home-open-filters")?.addEventListener("click", () => {
+    filtersPreviousScreenId = "screen-home";
+    showScreen("screen-filters");
+  });
+
+  document.getElementById("btn-home-calculator")?.addEventListener("click", () => {
+    openCalculatorModal();
+  });
+
+  document.getElementById("btn-close-calculator-modal")?.addEventListener("click", () => {
+    closeCalculatorModal();
+  });
+
+  document.getElementById("calculator-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "calculator-modal") closeCalculatorModal();
+  });
+
+  document.getElementById("calc-station-select")?.addEventListener("change", (e) => {
+    syncCalculatorWithStation(e.target.value);
+    runAndRenderCalculator();
+  });
+
+  document.getElementById("btn-calc-sync-ev")?.addEventListener("click", () => {
+    const vehicle = getVehicle();
+    document.getElementById("calc-capacity").value = vehicle.capacity;
+    document.getElementById("calc-current-soc").value = vehicle.currentSoc;
+    document.getElementById("calc-target-soc").value = vehicle.targetSoc;
+    runAndRenderCalculator();
+  });
+
+  document.getElementById("btn-quick-map")?.addEventListener("click", () => {
+    showScreen("screen-live-map");
+  });
+
+  document.getElementById("btn-quick-vehicle")?.addEventListener("click", () => {
+    vehiclePreviousScreenId = "screen-home";
+    showScreen("screen-vehicle");
+  });
+
+  document.getElementById("btn-quick-bookings")?.addEventListener("click", () => {
+    showScreen("screen-bookings");
+  });
+
+  // Station Details
+  document.getElementById("btn-back-from-details")?.addEventListener("click", () => {
+    showScreen(previousScreenId || "screen-home");
+  });
+
+  document.getElementById("btn-detail-book-now")?.addEventListener("click", () => {
+    if (selectedStationId) openSlotBooking(selectedStationId);
+  });
+
+  // Booking & 20% Advance Payment
+  document.getElementById("btn-back-from-booking")?.addEventListener("click", () => {
+    showScreen(bookingPreviousScreenId || "screen-station-details");
+  });
+
+  document.getElementById("booking-port-select")?.addEventListener("change", (e) => {
+    selectedBookingPortId = e.target.value || null;
+    const payBtn = document.getElementById("btn-simulate-payment");
+    if (payBtn) payBtn.disabled = !selectedBookingPortId;
+  });
+
+  document.getElementById("btn-simulate-payment")?.addEventListener("click", () => {
+    handleSimulateAdvancePayment();
+  });
+
+  document.getElementById("btn-conf-view-bookings")?.addEventListener("click", () => {
+    showScreen("screen-bookings");
+  });
+
+  // Bookings History & Profile
+  document.getElementById("btn-back-from-bookings")?.addEventListener("click", () => {
+    showScreen("screen-home");
+  });
+
+  document.getElementById("btn-back-from-profile")?.addEventListener("click", () => {
+    showScreen("screen-home");
+  });
+
+  document.getElementById("btn-reset-sample-stations")?.addEventListener("click", () => {
+    handleResetSampleStations();
+  });
+
+  document.getElementById("btn-logout-driver")?.addEventListener("click", () => {
+    handleLogoutDriver();
+  });
+
+  // My Vehicle — Save, New EV Mode, and Preset Quick-Fill Buttons
+  document.getElementById("btn-back-from-vehicle")?.addEventListener("click", () => {
+    showScreen(vehiclePreviousScreenId || "screen-home");
+  });
+
+  document.getElementById("btn-save-vehicle")?.addEventListener("click", handleVehicleSaveAction);
+  document.getElementById("vehicle-form")?.addEventListener("submit", handleVehicleSaveAction);
+
+  document.getElementById("btn-vehicle-new-mode")?.addEventListener("click", () => {
+    populateVehicleForm(
+      {
+        id: "",
+        name: "",
+        regNumber: "",
+        capacity: 40,
+        currentSoc: 25,
+        targetSoc: 80,
+        connector: "CCS2"
+      },
+      true
+    );
+    const statusMsg = document.getElementById("vehicle-status-msg");
+    if (statusMsg) {
+      statusMsg.textContent = "Enter your new EV details and tap Save Vehicle to Account.";
+      statusMsg.style.color = "#16A6A0";
+    }
+    document.getElementById("vehicle-name")?.focus();
+  });
+
+  document.querySelectorAll("#vehicle-presets-row .slot-pill-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.getElementById("vehicle-name").value = btn.dataset.presetName || "";
+      document.getElementById("vehicle-capacity").value = btn.dataset.presetCap || "40";
+      document.getElementById("vehicle-connector").value = btn.dataset.presetConn || "CCS2";
+      const statusMsg = document.getElementById("vehicle-status-msg");
+      if (statusMsg) {
+        statusMsg.textContent = `Prefilled ${btn.dataset.presetName}. Tap "Save Vehicle to Account" to save.`;
+        statusMsg.style.color = "#16A6A0";
+      }
+    });
+  });
+
+  // Filters
+  const openFiltersHandler = () => {
+    const active = document.querySelector(".screen.active");
+    if (active && active.id !== "screen-filters") filtersPreviousScreenId = active.id;
+    showScreen("screen-filters");
+  };
+
+  document.getElementById("btn-open-filters")?.addEventListener("click", openFiltersHandler);
+  document.getElementById("btn-livemap-filters")?.addEventListener("click", openFiltersHandler);
+
+  document.getElementById("btn-back-from-filters")?.addEventListener("click", () => {
+    showScreen(filtersPreviousScreenId || "screen-live-map");
+  });
+
+  document.getElementById("btn-apply-filters")?.addEventListener("click", () => {
+    readFilterStateFromInputs();
+    showScreen(filtersPreviousScreenId || "screen-live-map");
+  });
+
+  document.getElementById("btn-reset-filters")?.addEventListener("click", () => {
+    resetStationFilters();
+  });
+
+  // Live Calculator Modal Inputs
+  ["calc-capacity", "calc-current-soc", "calc-target-soc", "calc-power", "calc-price"].forEach(
+    (id) => {
+      document.getElementById(id)?.addEventListener("input", runAndRenderCalculator);
+    }
+  );
+
+  // Bottom Navigation
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const targetScreen = item.dataset.target;
+      showScreen(document.getElementById(targetScreen) ? targetScreen : "screen-home");
+    });
+  });
+});
